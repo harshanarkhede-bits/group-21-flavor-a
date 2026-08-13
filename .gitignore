@@ -1,0 +1,19 @@
+# Environments
+venv/
+env/
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Data and Models (DVC will handle these)
+data/
+models/
+*.csv
+*.parquet
+*.pkl
+*.joblib
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/

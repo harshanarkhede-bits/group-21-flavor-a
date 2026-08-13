@@ -7,10 +7,8 @@ env/
 __pycache__/
 *.pyc
 
-# Data and Models (DVC will handle these)
-data/
+# Models
 models/
-*.csv
 *.parquet
 *.pkl
 *.joblib

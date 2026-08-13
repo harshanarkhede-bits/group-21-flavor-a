@@ -23,7 +23,7 @@ The system follows a modular MLOps architecture using entirely open-source tools
                                                                           |
                                                                           v
 [Monitoring System] <--- (Logs Predictions) <--- (Drift Simulation & Retraining)
-
+```
 ## 3. Pipeline Phases & Design Justifications
 Phase 1: Data Engineering & Versioning (Module 2)
 Ingestion: Raw CSV data is sampled (100k rows for local development) to ensure rapid iteration. Invalid rows (e.g., zero passengers, missing coordinates, negative durations) are dropped.

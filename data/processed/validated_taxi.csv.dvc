@@ -1,0 +1,5 @@
+outs:
+- md5: 83f010610e4b6d324c31c10257a8eb08
+  size: 13409013
+  hash: md5
+  path: validated_taxi.csv

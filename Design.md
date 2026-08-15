@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Problem Statement:** Predict delivery time (Ride ETA) based on trip distance, time of day, and location.
 **Objective:** Build an end-to-end Machine Learning pipeline encompassing data engineering, experiment tracking, model deployment, and drift monitoring.
-**Dataset:** [NYC Taxi Trip Duration (Kaggle)](https://www.kaggle.com/c/nyc-taxi-trip-duration/data)
+**Dataset:** [Synthetic data based on NYC Taxi Trip Duration (Kaggle)](https://www.kaggle.com/c/nyc-taxi-trip-duration/data) 
 
 ## 2. System Architecture
 The system follows a modular MLOps architecture using entirely open-source tools:

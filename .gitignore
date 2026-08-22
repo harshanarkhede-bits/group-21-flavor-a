@@ -10,7 +10,6 @@ __pycache__/
 # Models
 models/
 *.parquet
-*.pkl
 *.joblib
 
 # Jupyter Notebook checkpoints

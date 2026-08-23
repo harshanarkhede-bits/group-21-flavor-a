@@ -1,0 +1,21 @@
+stages:
+  train:
+    cmd: python training/model_train.py
+    deps:
+    - data/raw/ETA_Model_data_1.csv
+    - training/model_train.py
+    outs:
+    - model_store
+    metrics:
+    - metrics/metrics.json:
+        cache: false
+  monitor:
+    cmd: python monitoring/monitor.py
+    deps:
+    - data/raw/ETA_Model_data_1.csv
+    - model_store/eta_encoder.pkl
+    - model_store/eta_model.pkl
+    - model_store/feature_columns.json
+    - monitoring/monitor.py
+    outs:
+    - metrics/monitoring.json

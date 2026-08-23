@@ -1,0 +1,1087 @@
+{
+    "monitoring_timestamp": "2026-08-23T16:47:08",
+    "reference_dataset": "D:\\Flavour A_ETA Estimation ML Projecct Group-21\\group-21-flavor-a\\monitoring\\reference_data.csv",
+    "production_dataset": "D:\\Flavour A_ETA Estimation ML Projecct Group-21\\group-21-flavor-a\\monitoring\\prediction_logs.csv",
+    "reference_rows": 10000,
+    "production_rows": 5,
+    "configuration": {
+        "minimum_production_rows": 10,
+        "numerical_drift_threshold": 0.2,
+        "categorical_drift_threshold": 0.2
+    },
+    "overall": {
+        "overall_status": "DRIFT DETECTED",
+        "numerical_features_with_drift": 3,
+        "categorical_features_with_drift": 5,
+        "total_features_with_drift": 8,
+        "warning": "Production dataset contains fewer than the recommended number of predictions."
+    },
+    "numerical_features": {
+        "pickup_hour": {
+            "reference_mean": 13.6448,
+            "production_mean": 2.4,
+            "reference_std": 6.4039,
+            "production_std": 0.5477,
+            "absolute_mean_difference": 11.2448,
+            "relative_mean_change": 0.8241,
+            "drift_threshold": 0.2,
+            "drift_detected": true,
+            "status": "DRIFT DETECTED"
+        },
+        "trip_distance_km": {
+            "reference_mean": 3.896,
+            "production_mean": 4.2538,
+            "reference_std": 4.7132,
+            "production_std": 3.5702,
+            "absolute_mean_difference": 0.3578,
+            "relative_mean_change": 0.0918,
+            "drift_threshold": 0.2,
+            "drift_detected": false,
+            "status": "NO DRIFT"
+        },
+        "passenger_count": {
+            "reference_mean": 1.6697,
+            "production_mean": 1.0,
+            "reference_std": 1.3187,
+            "production_std": 0.0,
+            "absolute_mean_difference": 0.6697,
+            "relative_mean_change": 0.4011,
+            "drift_threshold": 0.2,
+            "drift_detected": true,
+            "status": "DRIFT DETECTED"
+        },
+        "surge_multiplier": {
+            "reference_mean": 1.2723,
+            "production_mean": 1.0,
+            "reference_std": 0.3413,
+            "production_std": 0.0,
+            "absolute_mean_difference": 0.2723,
+            "relative_mean_change": 0.214,
+            "drift_threshold": 0.2,
+            "drift_detected": true,
+            "status": "DRIFT DETECTED"
+        }
+    },
+    "categorical_features": {
+        "pickup_location": {
+            "category_distribution": {
+                "Arden Heights": {
+                    "reference_percentage": 0.0078,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0078
+                },
+                "Arrochar": {
+                    "reference_percentage": 0.0028,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0028
+                },
+                "Arverne": {
+                    "reference_percentage": 0.0057,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0057
+                },
+                "Bath Beach": {
+                    "reference_percentage": 0.0019,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0019
+                },
+                "Bay Ridge": {
+                    "reference_percentage": 0.0023,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0023
+                },
+                "Bay Terrace, Staten Island": {
+                    "reference_percentage": 0.0061,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0061
+                },
+                "Bayswater": {
+                    "reference_percentage": 0.0015,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0015
+                },
+                "Bedford-Stuyvesant": {
+                    "reference_percentage": 0.0947,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0947
+                },
+                "Bensonhurst": {
+                    "reference_percentage": 0.0075,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0075
+                },
+                "Bergen Beach": {
+                    "reference_percentage": 0.0004,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0004
+                },
+                "Borough Park": {
+                    "reference_percentage": 0.0015,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0015
+                },
+                "Breezy Point": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Brighton Beach": {
+                    "reference_percentage": 0.0009,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0009
+                },
+                "Bull's Head": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Bushwick": {
+                    "reference_percentage": 0.0014,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0014
+                },
+                "Canarsie": {
+                    "reference_percentage": 0.0011,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0011
+                },
+                "Castleton Corners": {
+                    "reference_percentage": 0.0006,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0006
+                },
+                "Chelsea": {
+                    "reference_percentage": 0.008,
+                    "production_percentage": 0.4,
+                    "absolute_difference": 0.392
+                },
+                "Chinatown": {
+                    "reference_percentage": 0.0193,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0193
+                },
+                "Clifton": {
+                    "reference_percentage": 0.0023,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0023
+                },
+                "Clinton Hill": {
+                    "reference_percentage": 0.0313,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0313
+                },
+                "Concord": {
+                    "reference_percentage": 0.002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.002
+                },
+                "Coney Island": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Crown Heights": {
+                    "reference_percentage": 0.0211,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0211
+                },
+                "Dongan Hills": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Dyker Heights": {
+                    "reference_percentage": 0.0006,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0006
+                },
+                "East Flatbush": {
+                    "reference_percentage": 0.0007,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0007
+                },
+                "East Harlem": {
+                    "reference_percentage": 0.107,
+                    "production_percentage": 0.4,
+                    "absolute_difference": 0.293
+                },
+                "East Village": {
+                    "reference_percentage": 0.0044,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0044
+                },
+                "Edgemere": {
+                    "reference_percentage": 0.0014,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0014
+                },
+                "Eltingville": {
+                    "reference_percentage": 0.0021,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0021
+                },
+                "Emerson Hill": {
+                    "reference_percentage": 0.0006,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0006
+                },
+                "Far Rockaway": {
+                    "reference_percentage": 0.0027,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0027
+                },
+                "Flatbush": {
+                    "reference_percentage": 0.0044,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0044
+                },
+                "Flatlands": {
+                    "reference_percentage": 0.0043,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0043
+                },
+                "Fort Greene": {
+                    "reference_percentage": 0.0323,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0323
+                },
+                "Fort Hamilton": {
+                    "reference_percentage": 0.0056,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0056
+                },
+                "Gowanus": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Graniteville": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Grant City": {
+                    "reference_percentage": 0.0004,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0004
+                },
+                "Gravesend": {
+                    "reference_percentage": 0.0033,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0033
+                },
+                "Great Kills": {
+                    "reference_percentage": 0.0098,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0098
+                },
+                "Greenpoint": {
+                    "reference_percentage": 0.0072,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0072
+                },
+                "Grymes Hill": {
+                    "reference_percentage": 0.0006,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0006
+                },
+                "Harlem": {
+                    "reference_percentage": 0.1101,
+                    "production_percentage": 0.2,
+                    "absolute_difference": 0.0899
+                },
+                "Hell's Kitchen": {
+                    "reference_percentage": 0.0382,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0382
+                },
+                "Howland Hook": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Huguenot": {
+                    "reference_percentage": 0.0012,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0012
+                },
+                "Inwood": {
+                    "reference_percentage": 0.0219,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0219
+                },
+                "Kensington": {
+                    "reference_percentage": 0.0305,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0305
+                },
+                "Kips Bay": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Long Island City": {
+                    "reference_percentage": 0.0005,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0005
+                },
+                "Lower East Side": {
+                    "reference_percentage": 0.001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.001
+                },
+                "Manhattan Beach": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Midland Beach": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Midtown": {
+                    "reference_percentage": 0.0263,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0263
+                },
+                "Midwood": {
+                    "reference_percentage": 0.0103,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0103
+                },
+                "Mill Basin": {
+                    "reference_percentage": 0.0006,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0006
+                },
+                "Murray Hill": {
+                    "reference_percentage": 0.0315,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0315
+                },
+                "Neponsit": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "New Dorp Beach": {
+                    "reference_percentage": 0.0003,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0003
+                },
+                "New Springville": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Oakwood": {
+                    "reference_percentage": 0.0052,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0052
+                },
+                "Park Slope": {
+                    "reference_percentage": 0.0246,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0246
+                },
+                "Port Richmond": {
+                    "reference_percentage": 0.0004,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0004
+                },
+                "Prince's Bay": {
+                    "reference_percentage": 0.0053,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0053
+                },
+                "Prospect-Lefferts Gardens": {
+                    "reference_percentage": 0.0004,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0004
+                },
+                "Randall Manor": {
+                    "reference_percentage": 0.0005,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0005
+                },
+                "Richmondtown": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Rockaway Beach": {
+                    "reference_percentage": 0.0033,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0033
+                },
+                "Rosebank": {
+                    "reference_percentage": 0.0005,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0005
+                },
+                "Rosedale": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Rossville": {
+                    "reference_percentage": 0.0011,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0011
+                },
+                "Sheepshead Bay": {
+                    "reference_percentage": 0.0098,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0098
+                },
+                "Shore Acres": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Silver Lake": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "SoHo": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "South Beach": {
+                    "reference_percentage": 0.0005,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0005
+                },
+                "South Slope": {
+                    "reference_percentage": 0.0494,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0494
+                },
+                "St. George": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Stapleton": {
+                    "reference_percentage": 0.0008,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0008
+                },
+                "Todt Hill": {
+                    "reference_percentage": 0.0005,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0005
+                },
+                "Tompkinsville": {
+                    "reference_percentage": 0.0011,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0011
+                },
+                "Tottenville": {
+                    "reference_percentage": 0.0193,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0193
+                },
+                "Upper West Side": {
+                    "reference_percentage": 0.1213,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.1213
+                },
+                "West Brighton": {
+                    "reference_percentage": 0.0005,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0005
+                },
+                "West Village": {
+                    "reference_percentage": 0.0343,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0343
+                },
+                "Westerleigh": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Williamsburg": {
+                    "reference_percentage": 0.0328,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0328
+                },
+                "Windsor Terrace": {
+                    "reference_percentage": 0.0043,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0043
+                },
+                "Woodrow": {
+                    "reference_percentage": 0.0015,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0015
+                }
+            },
+            "maximum_distribution_difference": 0.392,
+            "drift_threshold": 0.2,
+            "drift_detected": true,
+            "status": "DRIFT DETECTED"
+        },
+        "drop_location": {
+            "category_distribution": {
+                "Arden Heights": {
+                    "reference_percentage": 0.005,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.005
+                },
+                "Arrochar": {
+                    "reference_percentage": 0.0025,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0025
+                },
+                "Arverne": {
+                    "reference_percentage": 0.0074,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0074
+                },
+                "Bath Beach": {
+                    "reference_percentage": 0.0013,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0013
+                },
+                "Bay Ridge": {
+                    "reference_percentage": 0.0028,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0028
+                },
+                "Bay Terrace, Staten Island": {
+                    "reference_percentage": 0.0043,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0043
+                },
+                "Bayswater": {
+                    "reference_percentage": 0.0021,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0021
+                },
+                "Bedford-Stuyvesant": {
+                    "reference_percentage": 0.0872,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0872
+                },
+                "Belle Harbor": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Bensonhurst": {
+                    "reference_percentage": 0.0093,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0093
+                },
+                "Bergen Beach": {
+                    "reference_percentage": 0.0005,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0005
+                },
+                "Borough Park": {
+                    "reference_percentage": 0.0019,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0019
+                },
+                "Breezy Point": {
+                    "reference_percentage": 0.0005,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0005
+                },
+                "Brighton Beach": {
+                    "reference_percentage": 0.0033,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0033
+                },
+                "Bull's Head": {
+                    "reference_percentage": 0.0008,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0008
+                },
+                "Bushwick": {
+                    "reference_percentage": 0.0006,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0006
+                },
+                "Canarsie": {
+                    "reference_percentage": 0.0007,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0007
+                },
+                "Castleton Corners": {
+                    "reference_percentage": 0.001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.001
+                },
+                "Chelsea": {
+                    "reference_percentage": 0.01,
+                    "production_percentage": 0.2,
+                    "absolute_difference": 0.19
+                },
+                "Chinatown": {
+                    "reference_percentage": 0.0182,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0182
+                },
+                "Clifton": {
+                    "reference_percentage": 0.0017,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0017
+                },
+                "Clinton Hill": {
+                    "reference_percentage": 0.0319,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0319
+                },
+                "Concord": {
+                    "reference_percentage": 0.0022,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0022
+                },
+                "Coney Island": {
+                    "reference_percentage": 0.001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.001
+                },
+                "Crown Heights": {
+                    "reference_percentage": 0.0229,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0229
+                },
+                "Dongan Hills": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Dyker Heights": {
+                    "reference_percentage": 0.0007,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0007
+                },
+                "East Flatbush": {
+                    "reference_percentage": 0.0006,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0006
+                },
+                "East Harlem": {
+                    "reference_percentage": 0.1103,
+                    "production_percentage": 0.2,
+                    "absolute_difference": 0.0897
+                },
+                "East Village": {
+                    "reference_percentage": 0.0045,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0045
+                },
+                "Edgemere": {
+                    "reference_percentage": 0.0009,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0009
+                },
+                "Eltingville": {
+                    "reference_percentage": 0.0053,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0053
+                },
+                "Emerson Hill": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Far Rockaway": {
+                    "reference_percentage": 0.0035,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0035
+                },
+                "Flatbush": {
+                    "reference_percentage": 0.0038,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0038
+                },
+                "Flatlands": {
+                    "reference_percentage": 0.0038,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0038
+                },
+                "Fort Greene": {
+                    "reference_percentage": 0.0314,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0314
+                },
+                "Fort Hamilton": {
+                    "reference_percentage": 0.005,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.005
+                },
+                "Fort Wadsworth": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Graniteville": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Gravesend": {
+                    "reference_percentage": 0.0035,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0035
+                },
+                "Great Kills": {
+                    "reference_percentage": 0.0073,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0073
+                },
+                "Greenpoint": {
+                    "reference_percentage": 0.0055,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0055
+                },
+                "Grymes Hill": {
+                    "reference_percentage": 0.0007,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0007
+                },
+                "Harlem": {
+                    "reference_percentage": 0.1124,
+                    "production_percentage": 0.4,
+                    "absolute_difference": 0.2876
+                },
+                "Hell's Kitchen": {
+                    "reference_percentage": 0.0387,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0387
+                },
+                "Huguenot": {
+                    "reference_percentage": 0.0034,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0034
+                },
+                "Inwood": {
+                    "reference_percentage": 0.018,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.018
+                },
+                "Kensington": {
+                    "reference_percentage": 0.0359,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0359
+                },
+                "Long Island City": {
+                    "reference_percentage": 0.0011,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0011
+                },
+                "Lower East Side": {
+                    "reference_percentage": 0.0011,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0011
+                },
+                "Manhattan Beach": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Mariners Harbor": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Midland Beach": {
+                    "reference_percentage": 0.0004,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0004
+                },
+                "Midtown": {
+                    "reference_percentage": 0.0287,
+                    "production_percentage": 0.2,
+                    "absolute_difference": 0.1713
+                },
+                "Midwood": {
+                    "reference_percentage": 0.0084,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0084
+                },
+                "Mill Basin": {
+                    "reference_percentage": 0.0007,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0007
+                },
+                "Murray Hill": {
+                    "reference_percentage": 0.0281,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0281
+                },
+                "Neponsit": {
+                    "reference_percentage": 0.0004,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0004
+                },
+                "New Dorp": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "New Dorp Beach": {
+                    "reference_percentage": 0.0012,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0012
+                },
+                "New Springville": {
+                    "reference_percentage": 0.0005,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0005
+                },
+                "Oakwood": {
+                    "reference_percentage": 0.003,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.003
+                },
+                "Park Slope": {
+                    "reference_percentage": 0.023,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.023
+                },
+                "Port Richmond": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Prince's Bay": {
+                    "reference_percentage": 0.0051,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0051
+                },
+                "Prospect-Lefferts Gardens": {
+                    "reference_percentage": 0.0004,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0004
+                },
+                "Randall Manor": {
+                    "reference_percentage": 0.0003,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0003
+                },
+                "Richmondtown": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Rockaway Beach": {
+                    "reference_percentage": 0.0025,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0025
+                },
+                "Rosebank": {
+                    "reference_percentage": 0.0006,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0006
+                },
+                "Rossville": {
+                    "reference_percentage": 0.0019,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0019
+                },
+                "Sea Gate": {
+                    "reference_percentage": 0.0004,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0004
+                },
+                "Sheepshead Bay": {
+                    "reference_percentage": 0.0126,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0126
+                },
+                "Shore Acres": {
+                    "reference_percentage": 0.0007,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0007
+                },
+                "Silver Lake": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "South Beach": {
+                    "reference_percentage": 0.0011,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0011
+                },
+                "South Slope": {
+                    "reference_percentage": 0.0494,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0494
+                },
+                "St. George": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Stapleton": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Todt Hill": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "Tompkinsville": {
+                    "reference_percentage": 0.0009,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0009
+                },
+                "Tottenville": {
+                    "reference_percentage": 0.0124,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0124
+                },
+                "Upper East Side": {
+                    "reference_percentage": 0.0006,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0006
+                },
+                "Upper West Side": {
+                    "reference_percentage": 0.1297,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.1297
+                },
+                "West Brighton": {
+                    "reference_percentage": 0.0002,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0002
+                },
+                "West Village": {
+                    "reference_percentage": 0.034,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.034
+                },
+                "Westerleigh": {
+                    "reference_percentage": 0.0005,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0005
+                },
+                "Williamsburg": {
+                    "reference_percentage": 0.0272,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0272
+                },
+                "Willowbrook": {
+                    "reference_percentage": 0.0001,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0001
+                },
+                "Windsor Terrace": {
+                    "reference_percentage": 0.0039,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0039
+                },
+                "Woodrow": {
+                    "reference_percentage": 0.0023,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.0023
+                }
+            },
+            "maximum_distribution_difference": 0.2876,
+            "drift_threshold": 0.2,
+            "drift_detected": true,
+            "status": "DRIFT DETECTED"
+        },
+        "traffic_level": {
+            "category_distribution": {
+                "High": {
+                    "reference_percentage": 0.2724,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.2724
+                },
+                "Low": {
+                    "reference_percentage": 0.5462,
+                    "production_percentage": 1.0,
+                    "absolute_difference": 0.4538
+                },
+                "Medium": {
+                    "reference_percentage": 0.1814,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.1814
+                }
+            },
+            "maximum_distribution_difference": 0.4538,
+            "drift_threshold": 0.2,
+            "drift_detected": true,
+            "status": "DRIFT DETECTED"
+        },
+        "weekday": {
+            "category_distribution": {
+                "Friday": {
+                    "reference_percentage": 0.152,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.152
+                },
+                "Monday": {
+                    "reference_percentage": 0.1286,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.1286
+                },
+                "Saturday": {
+                    "reference_percentage": 0.1515,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.1515
+                },
+                "Sunday": {
+                    "reference_percentage": 0.1356,
+                    "production_percentage": 1.0,
+                    "absolute_difference": 0.8644
+                },
+                "Thursday": {
+                    "reference_percentage": 0.1475,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.1475
+                },
+                "Tuesday": {
+                    "reference_percentage": 0.142,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.142
+                },
+                "Wednesday": {
+                    "reference_percentage": 0.1428,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.1428
+                }
+            },
+            "maximum_distribution_difference": 0.8644,
+            "drift_threshold": 0.2,
+            "drift_detected": true,
+            "status": "DRIFT DETECTED"
+        },
+        "season": {
+            "category_distribution": {
+                "Spring": {
+                    "reference_percentage": 0.5116,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.5116
+                },
+                "Summer": {
+                    "reference_percentage": 0.1665,
+                    "production_percentage": 1.0,
+                    "absolute_difference": 0.8335
+                },
+                "Winter": {
+                    "reference_percentage": 0.3219,
+                    "production_percentage": 0.0,
+                    "absolute_difference": 0.3219
+                }
+            },
+            "maximum_distribution_difference": 0.8335,
+            "drift_threshold": 0.2,
+            "drift_detected": true,
+            "status": "DRIFT DETECTED"
+        }
+    }
+}

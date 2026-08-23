@@ -11,7 +11,7 @@ __pycache__/
 models/
 *.parquet
 *.joblib
-
+model_store/
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 

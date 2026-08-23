@@ -1,0 +1,51 @@
+schema: '2.0'
+stages:
+  train:
+    cmd: python training/model_train.py
+    deps:
+    - path: data/raw/ETA_Model_data_1.csv
+      hash: md5
+      md5: 5ced9544882ba7d6f9c3cfe241c0bbb1
+      size: 1049074
+    - path: training/model_train.py
+      hash: md5
+      md5: 29042cf19118d06f14398c03d1991577
+      size: 23260
+    outs:
+    - path: metrics/metrics.json
+      hash: md5
+      md5: 9abf82d3e8a09e18d2066e525a4d8dac
+      size: 187
+    - path: model_store
+      hash: md5
+      md5: 05f71e3cacf5232a53cd98605f5ca6f1.dir
+      size: 150704
+      nfiles: 4
+  monitor:
+    cmd: python monitoring/monitor.py
+    deps:
+    - path: data/raw/ETA_Model_data_1.csv
+      hash: md5
+      md5: 5ced9544882ba7d6f9c3cfe241c0bbb1
+      size: 1049074
+    - path: model_store/eta_encoder.pkl
+      hash: md5
+      md5: ea52a75d8ad0c587f8716dce7f07e662
+      size: 3327
+    - path: model_store/eta_model.pkl
+      hash: md5
+      md5: e99242faa13081e32e7b68fdce93f238
+      size: 143432
+    - path: model_store/feature_columns.json
+      hash: md5
+      md5: 1ba6ba031839419fd7bd8471c0bac3fe
+      size: 3412
+    - path: monitoring/monitor.py
+      hash: md5
+      md5: cca320a815332159090a68122a3b99bb
+      size: 18182
+    outs:
+    - path: metrics/monitoring.json
+      hash: md5
+      md5: 339d11bf69971e1e5477e11845171f36
+      size: 462

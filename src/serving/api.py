@@ -8,6 +8,7 @@
 #   - Perform backend feature engineering
 #   - Load trained model and encoder
 #   - Generate ETA prediction
+#   - Log every successful prediction for monitoring
 #   - Return prediction as JSON
 #
 # User provides ONLY:
@@ -27,9 +28,9 @@
 
 import json
 import logging
-from datetime import date, datetime
+
+from datetime import datetime
 from pathlib import Path
-from typing import Dict
 
 import joblib
 import numpy as np
@@ -38,26 +39,83 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
-
-# ============================================================
-# 2. PROJECT PATHS
-# ============================================================
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-MODEL_STORE = PROJECT_ROOT / "model_store"
-
-MODEL_PATH = MODEL_STORE / "eta_model.pkl"
-ENCODER_PATH = MODEL_STORE / "eta_encoder.pkl"
-FEATURE_COLUMNS_PATH = MODEL_STORE / "feature_columns.json"
-METADATA_PATH = MODEL_STORE / "model_metadata.json"
+from monitoring.prediction_logger import log_prediction
 
 from src.serving.locations import (
     ALLOWED_LOCATIONS,
     LOCATION_COORDINATES
 )
+
+
 # ============================================================
-# 3. LOGGING
+# 2. PROJECT PATHS
+# ============================================================
+
+# api.py is located inside:
+#
+# group-21-flavor-a/
+#     src/
+#         serving/
+#             api.py
+#
+# Therefore:
+#
+# parents[0] = serving
+# parents[1] = src
+# parents[2] = project root
+
+PROJECT_ROOT = Path(
+    __file__
+).resolve().parents[2]
+
+
+MODEL_STORE = (
+    PROJECT_ROOT / "model_store"
+)
+
+
+MODEL_PATH = (
+    MODEL_STORE / "eta_model.pkl"
+)
+
+
+ENCODER_PATH = (
+    MODEL_STORE / "eta_encoder.pkl"
+)
+
+
+FEATURE_COLUMNS_PATH = (
+    MODEL_STORE / "feature_columns.json"
+)
+
+
+METADATA_PATH = (
+    MODEL_STORE / "model_metadata.json"
+)
+
+
+# ============================================================
+# 3. MONITORING PATH
+# ============================================================
+
+MONITORING_DIR = (
+    PROJECT_ROOT / "monitoring"
+)
+
+
+PREDICTION_LOG_PATH = (
+    MONITORING_DIR / "prediction_logs.csv"
+)
+
+
+MONITORING_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+
+# ============================================================
+# 4. LOGGING
 # ============================================================
 
 logging.basicConfig(
@@ -65,11 +123,14 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s"
 )
 
-logger = logging.getLogger(__name__)
+
+logger = logging.getLogger(
+    __name__
+)
 
 
 # ============================================================
-# 4. FASTAPI APPLICATION
+# 5. FASTAPI APPLICATION
 # ============================================================
 
 app = FastAPI(
@@ -83,15 +144,18 @@ app = FastAPI(
 )
 
 
-
 # ============================================================
-# 7. MODEL ARTIFACT VALIDATION
+# 6. MODEL ARTIFACT VALIDATION
 # ============================================================
 
 REQUIRED_ARTIFACTS = [
+
     MODEL_PATH,
+
     ENCODER_PATH,
+
     FEATURE_COLUMNS_PATH
+
 ]
 
 
@@ -105,41 +169,92 @@ for artifact in REQUIRED_ARTIFACTS:
 
 
 # ============================================================
-# 8. LOAD MODEL ARTIFACTS
+# 7. LOAD MODEL ARTIFACTS
 # ============================================================
 
-logger.info("Loading model artifacts...")
+logger.info(
+    "Loading model artifacts..."
+)
+
+
+# ------------------------------------------------------------
+# Load trained model
+# ------------------------------------------------------------
 
 model = joblib.load(
     MODEL_PATH
 )
 
+
+# ------------------------------------------------------------
+# Load encoder
+# ------------------------------------------------------------
+
 encoder = joblib.load(
     ENCODER_PATH
 )
 
+
+# ------------------------------------------------------------
+# Load feature columns
+# ------------------------------------------------------------
+
 with open(
     FEATURE_COLUMNS_PATH,
-    "r"
+    "r",
+    encoding="utf-8"
 ) as file:
 
-    FEATURE_COLUMNS = json.load(file)
+    FEATURE_COLUMNS = json.load(
+        file
+    )
 
 
-# Optional metadata
+# ------------------------------------------------------------
+# Load model metadata
+# ------------------------------------------------------------
+
 MODEL_METADATA = {}
+
 
 if METADATA_PATH.exists():
 
     with open(
         METADATA_PATH,
-        "r"
+        "r",
+        encoding="utf-8"
     ) as file:
 
-        MODEL_METADATA = json.load(file)
+        MODEL_METADATA = json.load(
+            file
+        )
 
 
-logger.info("Model artifacts loaded successfully.")
+# ============================================================
+# 8. MODEL VERSION
+# ============================================================
+
+MODEL_VERSION = MODEL_METADATA.get(
+    "model",
+    "GradientBoostingRegressor"
+)
+
+
+logger.info(
+    "Model version: %s",
+    MODEL_VERSION
+)
+
+
+logger.info(
+    "Model artifacts loaded successfully."
+)
+
+
+logger.info(
+    "Feature count: %s",
+    len(FEATURE_COLUMNS)
+)
 
 
 # ============================================================
@@ -168,13 +283,19 @@ class ETAPredictionRequest(BaseModel):
         description="Pickup time in HH:MM format"
     )
 
+
     # --------------------------------------------------------
     # Validate pickup location
     # --------------------------------------------------------
 
-    @field_validator("pickup_location")
+    @field_validator(
+        "pickup_location"
+    )
     @classmethod
-    def validate_pickup_location(cls, value):
+    def validate_pickup_location(
+        cls,
+        value
+    ):
 
         value = value.strip()
 
@@ -187,13 +308,19 @@ class ETAPredictionRequest(BaseModel):
 
         return value
 
+
     # --------------------------------------------------------
     # Validate drop location
     # --------------------------------------------------------
 
-    @field_validator("drop_location")
+    @field_validator(
+        "drop_location"
+    )
     @classmethod
-    def validate_drop_location(cls, value):
+    def validate_drop_location(
+        cls,
+        value
+    ):
 
         value = value.strip()
 
@@ -206,13 +333,19 @@ class ETAPredictionRequest(BaseModel):
 
         return value
 
+
     # --------------------------------------------------------
     # Validate date
     # --------------------------------------------------------
 
-    @field_validator("pickup_date")
+    @field_validator(
+        "pickup_date"
+    )
     @classmethod
-    def validate_date(cls, value):
+    def validate_date(
+        cls,
+        value
+    ):
 
         try:
 
@@ -229,13 +362,19 @@ class ETAPredictionRequest(BaseModel):
 
         return parsed_date.isoformat()
 
+
     # --------------------------------------------------------
     # Validate time
     # --------------------------------------------------------
 
-    @field_validator("pickup_time")
+    @field_validator(
+        "pickup_time"
+    )
     @classmethod
-    def validate_time(cls, value):
+    def validate_time(
+        cls,
+        value
+    ):
 
         try:
 
@@ -250,7 +389,9 @@ class ETAPredictionRequest(BaseModel):
                 "pickup_time must be in HH:MM format."
             )
 
-        return parsed_time.strftime("%H:%M")
+        return parsed_time.strftime(
+            "%H:%M"
+        )
 
 
 # ============================================================
@@ -270,44 +411,94 @@ def calculate_distance_km(
     """
 
     pickup_lat, pickup_lon = (
-        LOCATION_COORDINATES[pickup_location]
+        LOCATION_COORDINATES[
+            pickup_location
+        ]
     )
+
 
     drop_lat, drop_lon = (
-        LOCATION_COORDINATES[drop_location]
+        LOCATION_COORDINATES[
+            drop_location
+        ]
     )
 
+
+    # --------------------------------------------------------
     # Convert degrees to radians
-    lat1 = np.radians(pickup_lat)
-    lon1 = np.radians(pickup_lon)
+    # --------------------------------------------------------
 
-    lat2 = np.radians(drop_lat)
-    lon2 = np.radians(drop_lon)
+    lat1 = np.radians(
+        pickup_lat
+    )
 
-    delta_lat = lat2 - lat1
-    delta_lon = lon2 - lon1
+    lon1 = np.radians(
+        pickup_lon
+    )
 
+    lat2 = np.radians(
+        drop_lat
+    )
+
+    lon2 = np.radians(
+        drop_lon
+    )
+
+
+    # --------------------------------------------------------
+    # Differences
+    # --------------------------------------------------------
+
+    delta_lat = (
+        lat2 - lat1
+    )
+
+    delta_lon = (
+        lon2 - lon1
+    )
+
+
+    # --------------------------------------------------------
     # Haversine formula
+    # --------------------------------------------------------
+
     a = (
-        np.sin(delta_lat / 2) ** 2
+
+        np.sin(
+            delta_lat / 2
+        ) ** 2
+
         +
+
         np.cos(lat1)
         *
         np.cos(lat2)
         *
-        np.sin(delta_lon / 2) ** 2
+        np.sin(
+            delta_lon / 2
+        ) ** 2
+
     )
+
 
     c = 2 * np.arctan2(
+
         np.sqrt(a),
-        np.sqrt(1 - a)
+
+        np.sqrt(
+            1 - a
+        )
+
     )
 
+
     earth_radius_km = 6371.0
+
 
     distance = (
         earth_radius_km * c
     )
+
 
     return round(
         float(distance),
@@ -330,9 +521,13 @@ def create_datetime_features(
     """
 
     dt = datetime.strptime(
+
         f"{pickup_date} {pickup_time}",
+
         "%Y-%m-%d %H:%M"
+
     )
+
 
     pickup_hour = dt.hour
 
@@ -353,6 +548,7 @@ def create_datetime_features(
     is_weekend = int(
         dt.weekday() >= 5
     )
+
 
     # --------------------------------------------------------
     # Season
@@ -377,21 +573,30 @@ def create_datetime_features(
 
     return {
 
-        "pickup_hour": pickup_hour,
+        "pickup_hour":
+            pickup_hour,
 
-        "pickup_minute": pickup_minute,
+        "pickup_minute":
+            pickup_minute,
 
-        "month": month,
+        "month":
+            month,
 
-        "day": day,
+        "day":
+            day,
 
-        "day_of_year": day_of_year,
+        "day_of_year":
+            day_of_year,
 
-        "weekday": weekday,
+        "weekday":
+            weekday,
 
-        "is_weekend": is_weekend,
+        "is_weekend":
+            is_weekend,
 
-        "season": season
+        "season":
+            season
+
     }
 
 
@@ -409,11 +614,13 @@ def estimate_traffic_level(
 
     This is NOT real-time traffic.
 
-    It is a deterministic backend assumption designed
-    so the UI does not need to ask the user for traffic.
+    It is a deterministic backend assumption.
     """
 
+    # --------------------------------------------------------
     # Weekend
+    # --------------------------------------------------------
+
     if is_weekend:
 
         if 11 <= pickup_hour <= 18:
@@ -422,27 +629,43 @@ def estimate_traffic_level(
 
         return "Low"
 
+
+    # --------------------------------------------------------
     # Weekday morning rush
+    # --------------------------------------------------------
+
     if 7 <= pickup_hour <= 10:
 
         return "High"
 
+
+    # --------------------------------------------------------
     # Weekday evening rush
+    # --------------------------------------------------------
+
     if 16 <= pickup_hour <= 19:
 
         return "High"
 
+
+    # --------------------------------------------------------
     # Midday
+    # --------------------------------------------------------
+
     if 11 <= pickup_hour <= 15:
 
         return "Medium"
 
+
+    # --------------------------------------------------------
     # Night
+    # --------------------------------------------------------
+
     return "Low"
 
 
 # ============================================================
-# 13. INTERNAL DEFAULTS
+# 13. CREATE BACKEND FEATURES
 # ============================================================
 
 def create_backend_features(
@@ -454,38 +677,65 @@ def create_backend_features(
     by the user.
     """
 
+    # --------------------------------------------------------
+    # Date/time features
+    # --------------------------------------------------------
+
     datetime_features = (
         create_datetime_features(
+
             request.pickup_date,
+
             request.pickup_time
+
         )
     )
 
+
+    # --------------------------------------------------------
+    # Distance
+    # --------------------------------------------------------
+
     distance = calculate_distance_km(
+
         request.pickup_location,
+
         request.drop_location
+
     )
 
-    traffic_level = estimate_traffic_level(
-        datetime_features["pickup_hour"],
-        datetime_features["is_weekend"]
-    )
 
     # --------------------------------------------------------
-    # Backend assumptions
+    # Traffic
     # --------------------------------------------------------
-    #
-    # The UI does not ask for passenger count or surge.
-    # Therefore we use fixed baseline values.
-    #
-    # These should eventually be replaced by learned
-    # historical defaults if you retrain the model.
+
+    traffic_level = (
+        estimate_traffic_level(
+
+            datetime_features[
+                "pickup_hour"
+            ],
+
+            datetime_features[
+                "is_weekend"
+            ]
+
+        )
+    )
+
+
+    # --------------------------------------------------------
+    # Backend defaults
     # --------------------------------------------------------
 
     passenger_count = 1
 
     surge_multiplier = 1.0
 
+
+    # --------------------------------------------------------
+    # Final feature dictionary
+    # --------------------------------------------------------
 
     features = {
 
@@ -496,28 +746,44 @@ def create_backend_features(
             request.drop_location,
 
         "pickup_hour":
-            datetime_features["pickup_hour"],
+            datetime_features[
+                "pickup_hour"
+            ],
 
         "pickup_minute":
-            datetime_features["pickup_minute"],
+            datetime_features[
+                "pickup_minute"
+            ],
 
         "weekday":
-            datetime_features["weekday"],
+            datetime_features[
+                "weekday"
+            ],
 
         "is_weekend":
-            datetime_features["is_weekend"],
+            datetime_features[
+                "is_weekend"
+            ],
 
         "season":
-            datetime_features["season"],
+            datetime_features[
+                "season"
+            ],
 
         "month":
-            datetime_features["month"],
+            datetime_features[
+                "month"
+            ],
 
         "day":
-            datetime_features["day"],
+            datetime_features[
+                "day"
+            ],
 
         "day_of_year":
-            datetime_features["day_of_year"],
+            datetime_features[
+                "day_of_year"
+            ],
 
         "trip_distance_km":
             distance,
@@ -530,7 +796,9 @@ def create_backend_features(
 
         "surge_multiplier":
             surge_multiplier
+
     }
+
 
     return features
 
@@ -552,6 +820,7 @@ def prepare_model_input(
         [features]
     )
 
+
     # --------------------------------------------------------
     # Traffic encoding
     # --------------------------------------------------------
@@ -563,11 +832,20 @@ def prepare_model_input(
         "Medium": 1,
 
         "High": 2
+
     }
 
+
     raw_df["traffic_level"] = (
-        raw_df["traffic_level"]
-        .map(traffic_map)
+
+        raw_df[
+            "traffic_level"
+        ]
+
+        .map(
+            traffic_map
+        )
+
     )
 
 
@@ -584,47 +862,69 @@ def prepare_model_input(
         "weekday",
 
         "season"
+
     ]
 
 
     # --------------------------------------------------------
-    # Encode categories
+    # One-hot encoding
     # --------------------------------------------------------
 
     encoded = pd.DataFrame(
 
         encoder.transform(
+
             raw_df[
                 categorical_columns
             ]
+
         ),
 
         columns=encoder.get_feature_names_out(
+
             categorical_columns
+
         )
-    )
 
-
-    # Remove original categorical columns
-    raw_df = raw_df.drop(
-        columns=categorical_columns
-    )
-
-
-    # Combine numerical + encoded features
-    model_input = pd.concat(
-        [
-            raw_df.reset_index(drop=True),
-
-            encoded.reset_index(drop=True)
-        ],
-
-        axis=1
     )
 
 
     # --------------------------------------------------------
-    # Ensure exact feature order
+    # Remove original categorical columns
+    # --------------------------------------------------------
+
+    raw_df = raw_df.drop(
+
+        columns=categorical_columns
+
+    )
+
+
+    # --------------------------------------------------------
+    # Combine numerical + encoded features
+    # --------------------------------------------------------
+
+    model_input = pd.concat(
+
+        [
+
+            raw_df.reset_index(
+                drop=True
+            ),
+
+            encoded.reset_index(
+                drop=True
+            )
+
+        ],
+
+        axis=1
+
+    )
+
+
+    # --------------------------------------------------------
+    # Ensure exact feature schema
     # --------------------------------------------------------
 
     for column in FEATURE_COLUMNS:
@@ -634,7 +934,10 @@ def prepare_model_input(
             model_input[column] = 0
 
 
-    # Remove unexpected columns
+    # --------------------------------------------------------
+    # Remove unexpected columns and order correctly
+    # --------------------------------------------------------
+
     model_input = model_input[
         FEATURE_COLUMNS
     ]
@@ -653,46 +956,150 @@ def predict_eta(
 
     """
     Main prediction workflow.
+
+    Steps:
+
+        1. Create backend features
+        2. Prepare model input
+        3. Generate prediction
+        4. Log production prediction
+        5. Return prediction
+
+    IMPORTANT:
+        Monitoring failure does NOT cause the API
+        prediction to fail.
     """
 
-    # Create backend features
+    # ========================================================
+    # STEP 1 - CREATE BACKEND FEATURES
+    # ========================================================
+
     features = create_backend_features(
         request
     )
 
+
     logger.info(
+
         "Prediction request: %s -> %s",
+
         request.pickup_location,
+
         request.drop_location
+
     )
 
-    # Prepare model input
+
+    # ========================================================
+    # STEP 2 - PREPARE MODEL INPUT
+    # ========================================================
+
     model_input = prepare_model_input(
         features
     )
 
-    # Predict
+
+    # ========================================================
+    # STEP 3 - GENERATE PREDICTION
+    # ========================================================
+
     prediction = model.predict(
         model_input
     )
+
 
     eta_minutes = float(
         prediction[0]
     )
 
+
+    # --------------------------------------------------------
     # Prevent negative ETA
+    # --------------------------------------------------------
+
     eta_minutes = max(
         eta_minutes,
         0.0
     )
 
+
+    # --------------------------------------------------------
+    # Round prediction
+    # --------------------------------------------------------
+
+    eta_minutes = round(
+        eta_minutes,
+        2
+    )
+
+
+    # ========================================================
+    # STEP 4 - LOG PRODUCTION PREDICTION
+    # ========================================================
+    #
+    # IMPORTANT:
+    #
+    # prediction_logger.py expects:
+    #
+    #     features
+    #     pickup_date
+    #     pickup_time
+    #     predicted_eta
+    #     model_version
+    #
+    # We pass exactly those arguments.
+    #
+    # DO NOT pass pickup_location=, drop_location=,
+    # pickup_hour=, etc. individually.
+    #
+    # All those values already exist inside "features".
+    #
+    # ========================================================
+
+    try:
+
+        log_prediction(
+
+            features=features,
+
+            pickup_date=request.pickup_date,
+
+            pickup_time=request.pickup_time,
+
+            predicted_eta=eta_minutes,
+
+            model_version=MODEL_VERSION
+
+        )
+
+
+        logger.info(
+            "Prediction successfully logged for monitoring."
+        )
+
+
+    except Exception:
+
+        # ----------------------------------------------------
+        # IMPORTANT:
+        #
+        # Monitoring failure must not cause a successful
+        # prediction request to fail.
+        # ----------------------------------------------------
+
+        logger.exception(
+            "Failed to log prediction for monitoring."
+        )
+
+
+    # ========================================================
+    # STEP 5 - RETURN RESULT
+    # ========================================================
+
     return {
 
         "eta_minutes":
-            round(
-                eta_minutes,
-                2
-            ),
+            eta_minutes,
 
         "pickup_location":
             request.pickup_location,
@@ -707,10 +1114,15 @@ def predict_eta(
             request.pickup_time,
 
         "calculated_distance_km":
-            features["trip_distance_km"],
+            features[
+                "trip_distance_km"
+            ],
 
         "estimated_traffic_level":
-            features["traffic_level"]
+            features[
+                "traffic_level"
+            ]
+
     }
 
 
@@ -729,16 +1141,24 @@ def health_check():
 
     return {
 
-        "status": "healthy",
+        "status":
+            "healthy",
 
-        "service": "ETA Prediction API",
+        "service":
+            "ETA Prediction API",
 
-        "model_loaded": model is not None,
+        "model_loaded":
+            model is not None,
 
-        "encoder_loaded": encoder is not None,
+        "encoder_loaded":
+            encoder is not None,
 
         "feature_count":
-            len(FEATURE_COLUMNS)
+            len(FEATURE_COLUMNS),
+
+        "model_version":
+            MODEL_VERSION
+
     }
 
 
@@ -779,12 +1199,72 @@ def model_info():
             ),
 
         "feature_count":
-            len(FEATURE_COLUMNS)
+            len(FEATURE_COLUMNS),
+
+        "model_version":
+            MODEL_VERSION
+
     }
 
 
 # ============================================================
-# 18. ETA PREDICTION ENDPOINT
+# 18. MONITORING INFORMATION
+# ============================================================
+
+@app.get(
+    "/monitoring-info"
+)
+def monitoring_info():
+
+    """
+    Return basic information about the prediction log.
+    """
+
+    log_exists = PREDICTION_LOG_PATH.exists()
+
+    prediction_count = 0
+
+
+    if log_exists:
+
+        try:
+
+            df = pd.read_csv(
+                PREDICTION_LOG_PATH
+            )
+
+            prediction_count = len(
+                df
+            )
+
+        except Exception:
+
+            logger.exception(
+                "Unable to read prediction log."
+            )
+
+
+    return {
+
+        "monitoring_enabled":
+            True,
+
+        "prediction_log":
+            str(
+                PREDICTION_LOG_PATH
+            ),
+
+        "log_exists":
+            log_exists,
+
+        "prediction_count":
+            prediction_count
+
+    }
+
+
+# ============================================================
+# 19. ETA PREDICTION ENDPOINT
 # ============================================================
 
 @app.post(
@@ -804,18 +1284,24 @@ def predict(
             request
         )
 
+
         return {
 
-            "success": True,
+            "success":
+                True,
 
-            "prediction": result
+            "prediction":
+                result
+
         }
 
-    except Exception as error:
+
+    except Exception:
 
         logger.exception(
             "Prediction failed."
         )
+
 
         raise HTTPException(
 
@@ -824,4 +1310,5 @@ def predict(
             detail=(
                 "Unable to generate ETA prediction."
             )
+
         )

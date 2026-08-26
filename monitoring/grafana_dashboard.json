@@ -1,0 +1,43 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "title": "Total Prediction Requests",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(eta_prediction_requests_total)", "legendFormat": "Requests" }]
+    },
+    {
+      "title": "Average Request Latency (s)",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "targets": [{ "expr": "rate(eta_prediction_latency_seconds_sum[1m]) / rate(eta_prediction_latency_seconds_count[1m])", "legendFormat": "Latency" }]
+    },
+    {
+      "title": "Requests per Second by Status",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "targets": [{ "expr": "rate(eta_prediction_requests_total[1m])", "legendFormat": "{{status}} - {{endpoint}}" }]
+    },
+    {
+      "title": "Predicted ETA Distribution (minutes)",
+      "type": "histogram",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "targets": [{ "expr": "rate(eta_predicted_minutes_bucket[5m])", "legendFormat": "{{le}} min" }]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["mlops", "fastapi", "eta"],
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Ride ETA Model Serving & Health Dashboard"
+}

@@ -1,0 +1,56 @@
+name: CML Model Training & Evaluation Report
+
+on:
+  pull_request:
+    paths:
+      - 'src/data/**'
+      - 'src/features/**'
+      - 'src/models/**'
+      - 'params.yaml'
+      - 'data/raw/**'
+
+jobs:
+  train-and-report:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Full Pipeline
+        run: |
+          python src/data/ingest.py
+          python src/data/validate.py
+          python src/features/engineer.py
+          python src/models/train.py
+          python src/models/evaluate.py
+          python src/monitoring/drift_detector.py
+
+      - name: Post CML Evaluation Summary to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'model_store/evaluation_report.md';
+            if (fs.existsSync(reportPath)) {
+              const body = fs.readFileSync(reportPath, 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🤖 Automated MLOps Continuous Training Report\n\n${body}`
+              });
+            }

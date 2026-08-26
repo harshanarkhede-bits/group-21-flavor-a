@@ -1,0 +1,11 @@
+{
+  "simulation": "Evening Rush Hour Surge & Severe Weather Simulation",
+  "original_mean_eta": 13.57,
+  "drifted_mean_eta": 19.23,
+  "dataset_drift_detected": false,
+  "drift_share": 0.0189,
+  "drifted_features": [
+    "traffic_level",
+    "actual_eta_minutes"
+  ]
+}

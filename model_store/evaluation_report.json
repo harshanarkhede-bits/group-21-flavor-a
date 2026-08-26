@@ -1,0 +1,7 @@
+{
+    "test_r2": 0.7059,
+    "test_rmse": 5.8256,
+    "test_mae": 3.9353,
+    "test_mape_percent": 42.55,
+    "num_test_samples": 1985
+}

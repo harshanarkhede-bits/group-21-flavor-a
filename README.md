@@ -1,289 +1,288 @@
-﻿# Ride ETA Prediction Pipeline (Flavor A)
+# 🚗 Ride & Delivery ETA Prediction Pipeline (Flavor A) — Production MLOps Platform
 
-This project builds an end-to-end machine learning pipeline for predicting trip duration (ETA) based on ride features such as distance, time of day, day of week, and weekend status.
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.14-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
+[![MLflow](https://img.shields.io/badge/MLflow-0194E2?style=for-the-badge&logo=mlflow&logoColor=white)](https://mlflow.org)
+[![DVC](https://img.shields.io/badge/DVC-Data%20Versioning-945DD6?style=for-the-badge&logo=dvc&logoColor=white)](https://dvc.org)
+[![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
+[![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io)
+[![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-E6522C?style=for-the-badge&logo=prometheus&logoColor=white)](https://prometheus.io)
 
-The workflow includes:
-- data ingestion and validation
-- feature engineering
-- model training and comparison
-- experiment tracking with MLflow
-- model saving and packaging
-- REST API serving with FastAPI
-- monitoring, drift simulation, and retraining checks
-
----
-
-## Project goal
-
-Predict trip duration in seconds using trip-level features so the system can estimate delivery or ride ETA in real time.
-
-The target variable is:
-- trip_duration
+An enterprise-grade, end-to-end Machine Learning Operations (MLOps) platform for predicting ride and delivery Estimated Time of Arrival (ETA) in New York City. Built with modular pipelines, experiment tracking, automated drift detection, model registry, containerized microservices, and continuous integration.
 
 ---
 
-## Repository structure
+## 📐 System Architecture
+
+```mermaid
+flowchart TD
+    subgraph DataPipeline ["1. Data & Feature Engineering (DVC)"]
+        Raw["Raw Data (10,000 Trips)"] --> Ingest["Data Ingestion & Cleaning"]
+        Ingest --> Validate["Schema & Domain Validation"]
+        Validate --> FeatureEng["Feature Engineering (Haversine, Temporal, Encoding)"]
+        FeatureEng --> TrainTest["Train & Test Sets (data/processed/)"]
+    end
+
+    subgraph Experimentation ["2. Model Experimentation & Registry (MLflow)"]
+        TrainTest --> Models["Model Benchmark (Ridge, RF, GBDT, XGBoost)"]
+        Models --> MLflow["MLflow Tracking (Params, Metrics, Residuals, Plots)"]
+        MLflow --> Registry["MLflow Model Registry (RideETAPredictor)"]
+    end
+
+    subgraph Serving ["3. Production Serving (FastAPI)"]
+        Registry --> API["FastAPI Serving Service (:8000)"]
+        API --> Endpoints["/predict | /predict/batch | /model-info | /metrics | /health"]
+    end
+
+    subgraph Monitoring ["4. Monitoring & Drift Detection (Evidently + Prometheus)"]
+        API --> LiveLog["Prediction Logging (monitoring/prediction_log.csv)"]
+        LiveLog --> Drift["Evidently AI & KS Drift Detector"]
+        Drift --> Reports["Interactive HTML & JSON Drift Reports"]
+        Drift --> Retrain{"Retraining Trigger (Drift > 30% or RMSE degradation > 15%)"}
+        Retrain -->|Auto Trigger| Models
+    end
+
+    subgraph Ops ["5. UI & Orchestration (Streamlit + Docker)"]
+        API --> UI["Streamlit Ops Dashboard (:8501)"]
+        Prom["Prometheus (:9090)"] --> API
+        Grafana["Grafana (:3000)"] --> Prom
+        Docker["Docker Compose Stack (API, UI, MLflow, Prometheus, Grafana)"]
+    end
+```
+
+---
+
+## 🌟 Key MLOps Capabilities
+
+- **Unified Configuration**: Single source of truth in `params.yaml` managing all data paths, hyperparameters, and thresholds.
+- **Reproducible DVC Pipeline**: Complete multi-stage workflow definition in `dvc.yaml` (`ingest` ➔ `validate` ➔ `feature_engineering` ➔ `train` ➔ `evaluate` ➔ `drift_analysis`).
+- **Experiment Tracking & Model Registry**: Systematic MLflow logging of $R^2$, $RMSE$, $MAE$, $MAPE$, residual plots, feature importances, model signatures, and automatic candidate registration.
+- **Production REST API**: FastAPI serving single (`/predict`) and batch (`/predict/batch`) inference with sub-10ms response latency, readiness probes, and Prometheus scraping endpoint (`/metrics`).
+- **Continuous Monitoring & Drift Engine**: Evidently AI and Kolmogorov-Smirnov statistical tests detecting covariate and target drift, paired with an automated retraining decision engine.
+- **Rich Streamlit Dashboard**: 4-tab interactive interface for single ride route simulation, batch CSV prediction, model registry leaderboard, and drift operations.
+- **Containerization & CI/CD**: Multi-stage `Dockerfile`, `docker-compose.yml` (FastAPI + Streamlit + MLflow + Prometheus + Grafana), and GitHub Actions workflows for CI, CML PR commenting, and Docker smoke tests.
+
+---
+
+## 🗂️ Project Structure
 
 ```text
 .
+├── .github/workflows/
+│   ├── ci.yml                 # Linting, type checks & pytest with coverage
+│   ├── cml.yml                # Continuous Machine Learning PR model evaluation
+│   └── docker_build.yml       # Docker build validation
 ├── data/
 │   ├── raw/
-│   │   └── train.csv
+│   │   └── ETA_Model_data.csv # Raw trip dataset (10,000 records)
 │   └── processed/
-│       ├── validated_taxi.csv
-│       └── engineered_taxi.csv
+│       ├── ingested_eta.csv   # Cleaned ingested data
+│       ├── train_features.csv # Preprocessed training split
+│       └── test_features.csv  # Preprocessed test split
+├── model_store/
+│   ├── eta_model.pkl          # Serialized production model
+│   ├── eta_encoder.pkl        # Fitted OneHotEncoder
+│   ├── feature_columns.json   # Exact feature alignment list
+│   ├── model_metadata.json    # Active model metadata & lineage
+│   ├── evaluation_metrics.json# Benchmark comparison metrics
+│   └── plots/                 # Residual and feature importance plots
+├── monitoring/
+│   ├── drift_report.html      # Interactive Evidently / custom HTML dashboard
+│   ├── drift_report.json      # Structured drift test results
+│   ├── retrain_decision.json  # Automated retraining status & reasoning
+│   ├── prometheus.yml         # Prometheus scrape configuration
+│   └── grafana_dashboard.json # Grafana monitoring dashboard template
 ├── src/
-│   ├── ingest.py
-│   ├── preprocess.py
-│   ├── predict.py
-│   ├── monitoring.py
-│   ├── drift_simulation.py
-│   ├── retrain_trigger.py
-│   └── models/
-│       └── train_model.py
+│   ├── config.py              # Configuration loader for params.yaml
+│   ├── data/
+│   │   ├── ingest.py          # Data ingestion & basic sanitization
+│   │   └── validate.py        # Schema & quality assertions
+│   ├── features/
+│   │   └── engineer.py        # Haversine distance, temporal features & encoding
+│   ├── models/
+│   │   ├── train.py           # Multi-model training, MLflow tracking & registration
+│   │   └── evaluate.py        # Test set evaluation & CML report generator
+│   ├── serving/
+│   │   ├── api.py             # FastAPI serving service & Prometheus metrics
+│   │   └── locations.py       # NYC neighborhood coordinates & Haversine helper
+│   └── monitoring/
+│       ├── drift_detector.py  # Statistical drift & Evidently report engine
+│       ├── drift_simulation.py# Operational rush hour/weather drift simulator
+│       └── retrain_trigger.py # Automated retraining policy engine
 ├── tests/
-│   ├── test_api.py
-│   └── test_monitoring.py
-├── models/
-│   └── trip_duration_model.joblib
-├── requirements.txt
-├── .gitignore
-├── Design.md
-├── README.md
-├── mlruns/
-└── .dvc/
+│   ├── test_data_pipeline.py  # Ingestion & validation unit tests
+│   ├── test_features.py       # Feature transformation unit tests
+│   ├── test_models.py         # Training & evaluation tests
+│   ├── test_api.py            # FastAPI endpoint integration tests
+│   └── test_monitoring.py     # Drift detection & retraining policy tests
+├── ui/
+│   └── app.py                 # Multi-tab Streamlit dashboard
+├── params.yaml                # Centralized parameters
+├── dvc.yaml                   # DVC pipeline specification
+├── Dockerfile                 # Multi-stage production container definition
+├── docker-compose.yml         # Multi-service stack orchestration
+├── Makefile                   # Developer CLI commands
+└── requirements.txt           # Python dependencies
 ```
 
 ---
 
-## Environment setup
+## 🚀 Quick Start Guide
 
-From the project root:
+### 1. Environment Setup
 
-```powershell
-cd "d:\ML_Engg\group-21-flavor-a"
+```bash
+# Clone and enter the repository
+git clone <repo-url>
+cd group-21-flavor-a
+
+# Install dependencies
+python -m pip install -r requirements.txt
 ```
 
-If the project venv already exists, use the environment directly:
+### 2. Run the End-to-End Pipeline (One Command)
 
-```powershell
-.\venv\Scripts\python.exe --version
+```bash
+make pipeline
 ```
 
-If you need to install dependencies:
+*Or execute individual stages:*
 
-```powershell
-.\venv\Scripts\python.exe -m pip install -r requirements.txt
+```bash
+# Stage 1: Data Ingestion & Validation
+python src/data/ingest.py
+python src/data/validate.py
+
+# Stage 2: Feature Engineering & Preprocessing
+python src/features/engineer.py
+
+# Stage 3: Multi-Model Benchmark & MLflow Registration
+python src/models/train.py
+
+# Stage 4: Standalone Model Evaluation & CML Report
+python src/models/evaluate.py
+
+# Stage 5: Data Drift Analysis
+python src/monitoring/drift_detector.py
 ```
 
-If PowerShell blocks activation, use the Python executable directly instead of `Activate.ps1`:
+### 3. Start the FastAPI Serving Server
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```bash
+# Start FastAPI on port 8000
+python -m uvicorn src.serving.api:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+- Interactive Swagger Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- Liveness Probe: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+- Model Metadata: [http://127.0.0.1:8000/model-info](http://127.0.0.1:8000/model-info)
+- Prometheus Metrics: [http://127.0.0.1:8000/metrics](http://127.0.0.1:8000/metrics)
+
+### 4. Launch the Streamlit Dashboard
+
+```bash
+# Start Streamlit UI on port 8501
+python -m streamlit run ui/app.py --server.port 8501
+```
+
+- Open in browser: [http://localhost:8501](http://localhost:8501)
 
 ---
 
-## Step 1: Data ingestion and validation
+## 📡 REST API Reference
 
-This step reads the raw taxi CSV, samples a manageable subset for local development, validates fields, and removes invalid records.
+### Single Prediction (`POST /predict`)
 
-Run:
-
-```powershell
-.\venv\Scripts\python.exe src/ingest.py
-```
-
-This creates:
-- data/processed/validated_taxi.csv
-
-What is cleaned here:
-- missing values
-- invalid datetime values
-- unrealistic trip durations
-- zero-passenger trips
-
----
-
-## Step 2: Feature engineering
-
-This step creates the feature set used for training.
-
-Run:
-
-```powershell
-.\venv\Scripts\python.exe src/preprocess.py
-```
-
-This creates:
-- data/processed/engineered_taxi.csv
-
-Engineered features include:
-- distance_km
-- hour_of_day
-- day_of_week
-- is_weekend
-
----
-
-## Step 3: Model training and comparison
-
-This script trains multiple models and chooses the best one using validation metrics.
-
-Run:
-
-```powershell
-.\venv\Scripts\python.exe src/models/train_model.py
-```
-
-This creates:
-- models/trip_duration_model.joblib
-- models/trip_duration_model_metrics.json
-- MLflow experiment data under mlruns/
-
-Models compared:
-- Linear Regression
-- Random Forest
-- Gradient Boosting
-- XGBoost (if available)
-
-The best model is selected using RMSE.
-
----
-
-## Step 4: API / inference service
-
-The trained model is served through FastAPI.
-
-Start the API:
-
-```powershell
-.\venv\Scripts\python.exe -m uvicorn src.predict:app --host 127.0.0.1 --port 8001
-```
-
-Then open:
-- http://127.0.0.1:8001/docs
-- http://127.0.0.1:8001/health
-
-Example request body:
-
+**Request Payload:**
 ```json
 {
+  "pickup_location": "Upper West Side",
+  "drop_location": "Harlem",
+  "pickup_date": "2026-08-27",
+  "pickup_time": "17:30",
   "passenger_count": 1,
-  "distance_km": 5.2,
-  "hour_of_day": 17,
-  "day_of_week": 2,
-  "is_weekend": 0
+  "surge_multiplier": 1.0
 }
 ```
 
-Example response:
-
+**Response:**
 ```json
 {
-  "predicted_trip_duration_seconds": 735.42,
-  "predicted_trip_duration_minutes": 12.26
+  "success": true,
+  "eta_minutes": 14.85,
+  "eta_seconds": 891.0,
+  "calculated_distance_km": 3.75,
+  "estimated_traffic_level": "High",
+  "pickup_location": "Upper West Side",
+  "drop_location": "Harlem",
+  "pickup_date": "2026-08-27",
+  "pickup_time": "17:30",
+  "timestamp": "2026-08-27T00:00:00.000Z"
+}
+```
+
+### Batch Prediction (`POST /predict/batch`)
+
+**Request Payload:**
+```json
+{
+  "trips": [
+    {
+      "pickup_location": "Upper West Side",
+      "drop_location": "Harlem",
+      "pickup_date": "2026-08-27",
+      "pickup_time": "17:30"
+    },
+    {
+      "pickup_location": "Chelsea",
+      "drop_location": "South Slope",
+      "pickup_date": "2026-08-27",
+      "pickup_time": "08:15"
+    }
+  ]
 }
 ```
 
 ---
 
-## Step 5: Testing and validation
+## 🐳 Docker Containerization & Compose
 
-Run the API tests:
+Launch the full 5-service MLOps ecosystem with a single command:
 
-```powershell
-.\venv\Scripts\python.exe -m pytest tests/test_api.py -q
+```bash
+docker compose up --build -d
 ```
 
-Run the full validation suite:
+| Service | Port | Description |
+| :--- | :--- | :--- |
+| **FastAPI** | `8000` | High-performance inference engine & metrics |
+| **Streamlit** | `8501` | Operations & Prediction Dashboard |
+| **MLflow** | `5000` | Experiment tracking server & model registry |
+| **Prometheus** | `9090` | Time-series metrics collection |
+| **Grafana** | `3000` | Visualization dashboard (Credentials: `admin`/`admin`) |
 
-```powershell
-.\venv\Scripts\python.exe -m pytest tests/test_api.py tests/test_monitoring.py -q
+To shut down the stack:
+```bash
+docker compose down
 ```
-
-This checks:
-- health endpoint works
-- valid prediction requests succeed
-- invalid payloads are rejected
-- monitoring and retraining logic works
 
 ---
 
-## Step 6: Monitoring, drift simulation, and retraining
+## 🧪 Testing & Code Quality
 
-This stage is required for M5.
+Run the full automated test suite with coverage:
 
-### Monitoring
-
-The model logs prediction activity and computes monitoring metrics such as MAE and RMSE.
-
-Run:
-
-```powershell
-.\venv\Scripts\python.exe src/monitoring.py
+```bash
+# Run pytest with coverage report
+python -m pytest tests/ -v --cov=src --cov-report=term-missing
 ```
-
-### Drift simulation
-
-This simulates higher trip durations during busy evening and weekend periods.
-
-Run:
-
-```powershell
-.\venv\Scripts\python.exe src/drift_simulation.py
-```
-
-### Retraining trigger
-
-This checks whether current RMSE has crossed the threshold and should trigger retraining.
-
-Run:
-
-```powershell
-.\venv\Scripts\python.exe src/retrain_trigger.py
-```
-
-A simple trigger rule used in this project is:
-- if current RMSE > baseline RMSE by more than 15%, retrain the model
-
-This is the core logic for production monitoring and retraining.
 
 ---
 
-## Quick start summary
+## 🔄 Automated Drift & Retraining Strategy
 
-If you want the minimal path to run everything locally:
-
-```powershell
-cd "d:\ML_Engg\group-21-flavor-a"
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\venv\Scripts\python.exe src/ingest.py
-.\venv\Scripts\python.exe src/preprocess.py
-.\venv\Scripts\python.exe src/models/train_model.py
-.\venv\Scripts\python.exe -m uvicorn src.predict:app --host 127.0.0.1 --port 8001
-```
-
-Then open:
-- http://127.0.0.1:8001/docs
-
----
-
-## Notes
-
-- The project uses the local venv directly to avoid PowerShell execution-policy issues.
-- If data or model files are missing, re-run the preprocessing and training scripts first.
-- Generated MLflow and monitoring artifacts are useful for local experimentation and reporting.
-
----
-
-## Final outcome
-
-This project demonstrates an end-to-end ML lifecycle for ride ETA prediction:
-- raw data ingestion
-- validation and cleaning
-- feature engineering
-- multiple model comparisons
-- experiment tracking
-- model deployment as an API
-- monitoring and retraining logic for future drift handling
+1. **Drift Detection**: Kolmogorov-Smirnov and Evidently AI algorithms compute feature-by-feature divergence between baseline and live operational prediction logs.
+2. **Evaluation Policy**:
+   - $\Delta \text{RMSE} > 15\%$ above baseline validation error $\rightarrow$ Alert & Retrain Trigger.
+   - Dataset Feature Drift Share $\ge 30\% \rightarrow$ Alert & Retrain Trigger.
+3. **Simulation**: Use `python src/monitoring/drift_simulation.py` to simulate evening rush-hour congestion and adverse weather conditions to validate trigger behavior.

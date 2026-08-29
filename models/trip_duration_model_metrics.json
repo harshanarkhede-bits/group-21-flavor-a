@@ -1,0 +1,39 @@
+{
+  "best_model_name": "xgboost",
+  "model_path": "D:\\ML_Engg\\group-21-flavor-a\\models\\trip_duration_model.joblib",
+  "feature_columns": [
+    "passenger_count",
+    "distance_km",
+    "hour_of_day",
+    "day_of_week",
+    "is_weekend"
+  ],
+  "target_column": "trip_duration",
+  "best_metrics": {
+    "mae": 234.3013153076172,
+    "rmse": 362.7921021397792,
+    "r2": 0.698640763759613
+  },
+  "all_results": {
+    "linear_regression": {
+      "mae": 287.5045686089641,
+      "rmse": 425.9950904917138,
+      "r2": 0.5844933307567313
+    },
+    "random_forest": {
+      "mae": 257.55886211038325,
+      "rmse": 392.6305676082968,
+      "r2": 0.6470306243330275
+    },
+    "gradient_boosting": {
+      "mae": 235.37635992885714,
+      "rmse": 363.9903916992977,
+      "r2": 0.6966467512406629
+    },
+    "xgboost": {
+      "mae": 234.3013153076172,
+      "rmse": 362.7921021397792,
+      "r2": 0.698640763759613
+    }
+  }
+}

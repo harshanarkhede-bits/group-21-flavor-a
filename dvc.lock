@@ -1,0 +1,173 @@
+schema: '2.0'
+stages:
+  ingest:
+    cmd: python src/data/ingest.py
+    deps:
+    - path: data/raw/ETA_Model_data.csv
+      hash: md5
+      md5: 5ced9544882ba7d6f9c3cfe241c0bbb1
+      size: 1049074
+    - path: params.yaml
+      hash: md5
+      md5: 7cc278174e286af5336b750d82239739
+      size: 2506
+    - path: src/config.py
+      hash: md5
+      md5: 38ff7c2c07abcf4ce3a7f419dcd35c7c
+      size: 5653
+    - path: src/data/ingest.py
+      hash: md5
+      md5: ae61fbe135983d0cc2fca9e542f4eddd
+      size: 2514
+    outs:
+    - path: data/processed/ingested_eta.csv
+      hash: md5
+      md5: 5f21cd2441dd8f4f4493f310dbb4b376
+      size: 957223
+  validate:
+    cmd: python src/data/validate.py
+    deps:
+    - path: data/processed/ingested_eta.csv
+      hash: md5
+      md5: 5f21cd2441dd8f4f4493f310dbb4b376
+      size: 957223
+    - path: params.yaml
+      hash: md5
+      md5: 7cc278174e286af5336b750d82239739
+      size: 2506
+    - path: src/config.py
+      hash: md5
+      md5: 38ff7c2c07abcf4ce3a7f419dcd35c7c
+      size: 5653
+    - path: src/data/validate.py
+      hash: md5
+      md5: 64c212c3865b7493238f45ef2c9d2ad1
+      size: 3814
+  feature_engineering:
+    cmd: python src/features/engineer.py
+    deps:
+    - path: data/processed/ingested_eta.csv
+      hash: md5
+      md5: 5f21cd2441dd8f4f4493f310dbb4b376
+      size: 957223
+    - path: params.yaml
+      hash: md5
+      md5: 7cc278174e286af5336b750d82239739
+      size: 2506
+    - path: src/config.py
+      hash: md5
+      md5: 38ff7c2c07abcf4ce3a7f419dcd35c7c
+      size: 5653
+    - path: src/features/engineer.py
+      hash: md5
+      md5: 65d0c7beae199146eb7cfa206b14409e
+      size: 7787
+    - path: src/serving/locations.py
+      hash: md5
+      md5: e908b81521c98fab1a71c61e65ed30b2
+      size: 2334
+    outs:
+    - path: data/processed/test_features.csv
+      hash: md5
+      md5: 77d1eac50759d0861fc791d01e568ff7
+      size: 824902
+    - path: data/processed/train_features.csv
+      hash: md5
+      md5: f04e60a23d27af15dba6e700eb8e7d57
+      size: 3289858
+    - path: model_store/eta_encoder.pkl
+      hash: md5
+      md5: a21e0c55e7bc9159c2a7061908a465f7
+      size: 3327
+    - path: model_store/feature_columns.json
+      hash: md5
+      md5: 33f3e9ff7b5bbbae4da837a6706aba31
+      size: 3202
+  train:
+    cmd: python src/models/train.py
+    deps:
+    - path: data/processed/test_features.csv
+      hash: md5
+      md5: 77d1eac50759d0861fc791d01e568ff7
+      size: 824902
+    - path: data/processed/train_features.csv
+      hash: md5
+      md5: f04e60a23d27af15dba6e700eb8e7d57
+      size: 3289858
+    - path: params.yaml
+      hash: md5
+      md5: 7cc278174e286af5336b750d82239739
+      size: 2506
+    - path: src/config.py
+      hash: md5
+      md5: 38ff7c2c07abcf4ce3a7f419dcd35c7c
+      size: 5653
+    - path: src/models/train.py
+      hash: md5
+      md5: 19ba518b590e5889da6e68c589a5a1f7
+      size: 10693
+    outs:
+    - path: model_store/eta_model.pkl
+      hash: md5
+      md5: 933edec55545dd9a5852ead8d230b2a4
+      size: 305610
+    - path: model_store/evaluation_metrics.json
+      hash: md5
+      md5: fc27f88d1b5388b689d94c42ce6f1474
+      size: 4910
+    - path: model_store/model_metadata.json
+      hash: md5
+      md5: 4a9771c7edc5552327e37d1a60ecfbd1
+      size: 1321
+  evaluate:
+    cmd: python src/models/evaluate.py
+    deps:
+    - path: data/processed/test_features.csv
+      hash: md5
+      md5: 77d1eac50759d0861fc791d01e568ff7
+      size: 824902
+    - path: model_store/eta_model.pkl
+      hash: md5
+      md5: 933edec55545dd9a5852ead8d230b2a4
+      size: 305610
+    - path: src/config.py
+      hash: md5
+      md5: 38ff7c2c07abcf4ce3a7f419dcd35c7c
+      size: 5653
+    - path: src/models/evaluate.py
+      hash: md5
+      md5: 7ed0b89accaaf5d9a89fc559a3ac80d4
+      size: 3606
+    outs:
+    - path: model_store/evaluation_report.md
+      hash: md5
+      md5: ef0a8072fef4729535b5432b4bab2ec7
+      size: 495
+  drift_analysis:
+    cmd: python src/monitoring/drift_detector.py
+    deps:
+    - path: data/processed/test_features.csv
+      hash: md5
+      md5: 77d1eac50759d0861fc791d01e568ff7
+      size: 824902
+    - path: data/processed/train_features.csv
+      hash: md5
+      md5: f04e60a23d27af15dba6e700eb8e7d57
+      size: 3289858
+    - path: src/config.py
+      hash: md5
+      md5: 38ff7c2c07abcf4ce3a7f419dcd35c7c
+      size: 5653
+    - path: src/monitoring/drift_detector.py
+      hash: md5
+      md5: eb3ba247e277719830c86b7dd25b9815
+      size: 7044
+    outs:
+    - path: monitoring/drift_report.html
+      hash: md5
+      md5: ea1869854a21125398481dc76777771c
+      size: 13272
+    - path: monitoring/drift_report.json
+      hash: md5
+      md5: 047451a9d8bb5bc6123dc74010354adc
+      size: 21295

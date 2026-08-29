@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, Tuple
@@ -144,6 +145,10 @@ def train_and_evaluate_models() -> Tuple[Any, Dict[str, Any]]:
 
     if HAS_MLFLOW:
         try:
+            tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
+            if not tracking_uri:
+                tracking_uri = f"sqlite:///{(PROJECT_ROOT / 'mlflow.db').as_posix()}"
+            mlflow.set_tracking_uri(tracking_uri)
             mlflow.set_experiment(config.experiment_name)
         except Exception as e:
             logger.warning(f"Failed to set MLflow experiment: {e}")

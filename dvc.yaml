@@ -1,0 +1,78 @@
+stages:
+  ingest:
+    cmd: python src/data/ingest.py
+    deps:
+      - src/data/ingest.py
+      - src/config.py
+      - data/raw/ETA_Model_data.csv
+      - params.yaml
+    outs:
+      - data/processed/ingested_eta.csv:
+          persist: false
+
+  validate:
+    cmd: python src/data/validate.py
+    deps:
+      - src/data/validate.py
+      - data/processed/ingested_eta.csv
+      - src/config.py
+      - params.yaml
+
+  feature_engineering:
+    cmd: python src/features/engineer.py
+    deps:
+      - src/features/engineer.py
+      - data/processed/ingested_eta.csv
+      - src/serving/locations.py
+      - src/config.py
+      - params.yaml
+    outs:
+      - data/processed/train_features.csv:
+          persist: false
+      - data/processed/test_features.csv:
+          persist: false
+      - model_store/eta_encoder.pkl:
+          persist: true
+      - model_store/feature_columns.json:
+          persist: true
+
+  train:
+    cmd: python src/models/train.py
+    deps:
+      - src/models/train.py
+      - data/processed/train_features.csv
+      - data/processed/test_features.csv
+      - src/config.py
+      - params.yaml
+    outs:
+      - model_store/eta_model.pkl:
+          persist: true
+      - model_store/model_metadata.json:
+          persist: true
+    metrics:
+      - model_store/evaluation_metrics.json:
+          cache: false
+
+  evaluate:
+    cmd: python src/models/evaluate.py
+    deps:
+      - src/models/evaluate.py
+      - model_store/eta_model.pkl
+      - data/processed/test_features.csv
+      - src/config.py
+    outs:
+      - model_store/evaluation_report.md:
+          persist: true
+
+  drift_analysis:
+    cmd: python src/monitoring/drift_detector.py
+    deps:
+      - src/monitoring/drift_detector.py
+      - data/processed/train_features.csv
+      - data/processed/test_features.csv
+      - src/config.py
+    outs:
+      - monitoring/drift_report.json:
+          persist: true
+      - monitoring/drift_report.html:
+          persist: true

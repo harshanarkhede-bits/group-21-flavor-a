@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-08-26T18:49:41.343178+00:00",
+  "baseline_rmse": 5.825554072316037,
+  "current_rmse": 12.0,
+  "rmse_increase_pct": 105.99,
+  "threshold_pct": 15.0,
+  "rmse_breach_detected": true,
+  "drift_detected": false,
+  "drift_share": 0.0094,
+  "retraining_triggered": true,
+  "status": "ACTION_REQUIRED_RETRAIN",
+  "reasons": [
+    "RMSE degradation of 106.0% exceeded allowed threshold of 15.0%."
+  ],
+  "recommended_action": "Execute pipeline retraining (src.models.train)"
+}

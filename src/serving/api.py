@@ -1,827 +1,434 @@
-# ============================================================
-# ETA PREDICTION - SERVING API
-# ============================================================
-#
-# Purpose:
-#   - Accept user inputs from UI
-#   - Validate inputs
-#   - Perform backend feature engineering
-#   - Load trained model and encoder
-#   - Generate ETA prediction
-#   - Return prediction as JSON
-#
-# User provides ONLY:
-#   1. Pickup location
-#   2. Drop location
-#   3. Pickup date
-#   4. Pickup time
-#
-# No external APIs are used.
-#
-# ============================================================
+from __future__ import annotations
 
-
-# ============================================================
-# 1. IMPORTS
-# ============================================================
-
+import csv
 import json
 import logging
-from datetime import date, datetime
+import time
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict, List, Optional
 
 import joblib
 import numpy as np
 import pandas as pd
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
+# Prometheus metrics
+try:
+    from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+    HAS_PROMETHEUS = True
+    PREDICTION_REQUESTS = Counter(
+        "eta_prediction_requests_total",
+        "Total number of ETA prediction requests",
+        ["status", "endpoint"]
+    )
+    PREDICTION_LATENCY = Histogram(
+        "eta_prediction_latency_seconds",
+        "Latency of ETA prediction requests in seconds",
+        ["endpoint"],
+        buckets=[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5]
+    )
+    PREDICTED_ETA_HISTOGRAM = Histogram(
+        "eta_predicted_minutes",
+        "Distribution of predicted ETA in minutes",
+        buckets=[5.0, 10.0, 15.0, 20.0, 30.0, 45.0, 60.0, 90.0, 120.0]
+    )
+except ImportError:
+    HAS_PROMETHEUS = False
 
-# ============================================================
-# 2. PROJECT PATHS
-# ============================================================
+from src.config import config
+from src.serving.locations import ALLOWED_LOCATIONS, calculate_haversine_distance_km
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-MODEL_STORE = PROJECT_ROOT / "model_store"
-
-MODEL_PATH = MODEL_STORE / "eta_model.pkl"
-ENCODER_PATH = MODEL_STORE / "eta_encoder.pkl"
-FEATURE_COLUMNS_PATH = MODEL_STORE / "feature_columns.json"
-METADATA_PATH = MODEL_STORE / "model_metadata.json"
-
-from src.serving.locations import (
-    ALLOWED_LOCATIONS,
-    LOCATION_COORDINATES
-)
-# ============================================================
-# 3. LOGGING
-# ============================================================
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s"
-)
-
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
-
-# ============================================================
-# 4. FASTAPI APPLICATION
-# ============================================================
-
 app = FastAPI(
-    title="ETA Prediction API",
-    description=(
-        "API for predicting delivery/ride ETA "
-        "using pickup location, drop location, "
-        "pickup date and pickup time."
-    ),
-    version="1.0.0"
+    title=config.project_name,
+    description="Enterprise MLOps REST API for Ride and Delivery ETA Prediction.",
+    version=config.project_version,
 )
 
-
-
-# ============================================================
-# 7. MODEL ARTIFACT VALIDATION
-# ============================================================
-
-REQUIRED_ARTIFACTS = [
-    MODEL_PATH,
-    ENCODER_PATH,
-    FEATURE_COLUMNS_PATH
-]
-
-
-for artifact in REQUIRED_ARTIFACTS:
-
-    if not artifact.exists():
-
-        raise FileNotFoundError(
-            f"Required model artifact not found: {artifact}"
-        )
-
-
-# ============================================================
-# 8. LOAD MODEL ARTIFACTS
-# ============================================================
-
-logger.info("Loading model artifacts...")
-
-model = joblib.load(
-    MODEL_PATH
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-encoder = joblib.load(
-    ENCODER_PATH
-)
-
-with open(
-    FEATURE_COLUMNS_PATH,
-    "r"
-) as file:
-
-    FEATURE_COLUMNS = json.load(file)
+# ------------------------------------------------------------
+# Artifact Loaders
+# ------------------------------------------------------------
+model: Any = None
+encoder: Any = None
+feature_columns: List[str] = []
+model_metadata: Dict[str, Any] = {}
 
 
-# Optional metadata
-MODEL_METADATA = {}
+def load_artifacts() -> bool:
+    global model, encoder, feature_columns, model_metadata
+    try:
+        if config.model_path.exists():
+            model = joblib.load(config.model_path)
+            logger.info(f"Loaded model from: {config.model_path}")
+        if config.encoder_path.exists():
+            encoder = joblib.load(config.encoder_path)
+            logger.info(f"Loaded encoder from: {config.encoder_path}")
+        if config.feature_columns_path.exists():
+            with open(config.feature_columns_path, "r", encoding="utf-8") as f:
+                feature_columns = json.load(f)
+            logger.info(f"Loaded {len(feature_columns)} feature columns.")
+        if config.metadata_path.exists():
+            with open(config.metadata_path, "r", encoding="utf-8") as f:
+                model_metadata = json.load(f)
+        return model is not None and encoder is not None and len(feature_columns) > 0
+    except Exception as e:
+        logger.error(f"Error loading artifacts: {e}")
+        return False
 
-if METADATA_PATH.exists():
 
-    with open(
-        METADATA_PATH,
-        "r"
-    ) as file:
-
-        MODEL_METADATA = json.load(file)
+# Attempt initial load
+load_artifacts()
 
 
-logger.info("Model artifacts loaded successfully.")
-
-
-# ============================================================
-# 9. REQUEST SCHEMA
-# ============================================================
-
+# ------------------------------------------------------------
+# Schemas
+# ------------------------------------------------------------
 class ETAPredictionRequest(BaseModel):
+    pickup_location: str = Field(..., json_schema_extra={"example": "Upper West Side"})
+    drop_location: str = Field(..., json_schema_extra={"example": "Harlem"})
+    pickup_date: str = Field(..., json_schema_extra={"example": "2026-08-27"}, description="YYYY-MM-DD format")
+    pickup_time: str = Field(..., json_schema_extra={"example": "17:30"}, description="HH:MM format")
+    passenger_count: Optional[int] = Field(default=1, ge=1, le=8)
+    surge_multiplier: Optional[float] = Field(default=1.0, ge=1.0, le=5.0)
 
-    pickup_location: str = Field(
-        ...,
-        description="Pickup location"
-    )
-
-    drop_location: str = Field(
-        ...,
-        description="Drop location"
-    )
-
-    pickup_date: str = Field(
-        ...,
-        description="Pickup date in YYYY-MM-DD format"
-    )
-
-    pickup_time: str = Field(
-        ...,
-        description="Pickup time in HH:MM format"
-    )
-
-    # --------------------------------------------------------
-    # Validate pickup location
-    # --------------------------------------------------------
-
-    @field_validator("pickup_location")
+    @field_validator("pickup_location", "drop_location")
     @classmethod
-    def validate_pickup_location(cls, value):
-
-        value = value.strip()
-
-        if value not in ALLOWED_LOCATIONS:
-
+    def validate_locations(cls, val: str) -> str:
+        val = val.strip()
+        if val not in ALLOWED_LOCATIONS:
             raise ValueError(
-                "Invalid pickup location. "
-                "Please select a location from the allowed list."
+                f"Invalid location '{val}'. Allowed locations: {', '.join(ALLOWED_LOCATIONS)}"
             )
-
-        return value
-
-    # --------------------------------------------------------
-    # Validate drop location
-    # --------------------------------------------------------
-
-    @field_validator("drop_location")
-    @classmethod
-    def validate_drop_location(cls, value):
-
-        value = value.strip()
-
-        if value not in ALLOWED_LOCATIONS:
-
-            raise ValueError(
-                "Invalid drop location. "
-                "Please select a location from the allowed list."
-            )
-
-        return value
-
-    # --------------------------------------------------------
-    # Validate date
-    # --------------------------------------------------------
+        return val
 
     @field_validator("pickup_date")
     @classmethod
-    def validate_date(cls, value):
-
+    def validate_date_format(cls, val: str) -> str:
         try:
-
-            parsed_date = datetime.strptime(
-                value,
-                "%Y-%m-%d"
-            ).date()
-
+            datetime.strptime(val.strip(), "%Y-%m-%d")
         except ValueError:
-
-            raise ValueError(
-                "pickup_date must be in YYYY-MM-DD format."
-            )
-
-        return parsed_date.isoformat()
-
-    # --------------------------------------------------------
-    # Validate time
-    # --------------------------------------------------------
+            raise ValueError("pickup_date must be in YYYY-MM-DD format.")
+        return val.strip()
 
     @field_validator("pickup_time")
     @classmethod
-    def validate_time(cls, value):
-
+    def validate_time_format(cls, val: str) -> str:
         try:
-
-            parsed_time = datetime.strptime(
-                value,
-                "%H:%M"
-            ).time()
-
+            datetime.strptime(val.strip(), "%H:%M")
         except ValueError:
-
-            raise ValueError(
-                "pickup_time must be in HH:MM format."
-            )
-
-        return parsed_time.strftime("%H:%M")
+            raise ValueError("pickup_time must be in HH:MM format.")
+        return val.strip()
 
 
-# ============================================================
-# 10. HAVERSINE DISTANCE FUNCTION
-# ============================================================
-
-def calculate_distance_km(
-    pickup_location: str,
+class ETAPredictionResponse(BaseModel):
+    success: bool = True
+    eta_minutes: float
+    eta_seconds: float
+    calculated_distance_km: float
+    estimated_traffic_level: str
+    pickup_location: str
     drop_location: str
-) -> float:
-
-    """
-    Calculate approximate straight-line distance
-    between pickup and drop locations.
-
-    No external API is used.
-    """
-
-    pickup_lat, pickup_lon = (
-        LOCATION_COORDINATES[pickup_location]
-    )
-
-    drop_lat, drop_lon = (
-        LOCATION_COORDINATES[drop_location]
-    )
-
-    # Convert degrees to radians
-    lat1 = np.radians(pickup_lat)
-    lon1 = np.radians(pickup_lon)
-
-    lat2 = np.radians(drop_lat)
-    lon2 = np.radians(drop_lon)
-
-    delta_lat = lat2 - lat1
-    delta_lon = lon2 - lon1
-
-    # Haversine formula
-    a = (
-        np.sin(delta_lat / 2) ** 2
-        +
-        np.cos(lat1)
-        *
-        np.cos(lat2)
-        *
-        np.sin(delta_lon / 2) ** 2
-    )
-
-    c = 2 * np.arctan2(
-        np.sqrt(a),
-        np.sqrt(1 - a)
-    )
-
-    earth_radius_km = 6371.0
-
-    distance = (
-        earth_radius_km * c
-    )
-
-    return round(
-        float(distance),
-        3
-    )
-
-
-# ============================================================
-# 11. TIME / DATE FEATURE ENGINEERING
-# ============================================================
-
-def create_datetime_features(
-    pickup_date: str,
+    pickup_date: str
     pickup_time: str
-) -> dict:
-
-    """
-    Convert user-provided date/time into
-    model-compatible features.
-    """
-
-    dt = datetime.strptime(
-        f"{pickup_date} {pickup_time}",
-        "%Y-%m-%d %H:%M"
-    )
-
-    pickup_hour = dt.hour
-
-    pickup_minute = dt.minute
-
-    month = dt.month
-
-    day = dt.day
-
-    day_of_year = (
-        dt.timetuple().tm_yday
-    )
-
-    weekday = dt.strftime(
-        "%A"
-    )
-
-    is_weekend = int(
-        dt.weekday() >= 5
-    )
-
-    # --------------------------------------------------------
-    # Season
-    # --------------------------------------------------------
-
-    if month in [12, 1, 2]:
-
-        season = "Winter"
-
-    elif month in [3, 4, 5]:
-
-        season = "Spring"
-
-    elif month in [6, 7, 8]:
-
-        season = "Summer"
-
-    else:
-
-        season = "Fall"
+    timestamp: str
 
 
-    return {
-
-        "pickup_hour": pickup_hour,
-
-        "pickup_minute": pickup_minute,
-
-        "month": month,
-
-        "day": day,
-
-        "day_of_year": day_of_year,
-
-        "weekday": weekday,
-
-        "is_weekend": is_weekend,
-
-        "season": season
-    }
+class ETABatchPredictionRequest(BaseModel):
+    trips: List[ETAPredictionRequest]
 
 
-# ============================================================
-# 12. BACKEND TRAFFIC ESTIMATION
-# ============================================================
+class ETABatchPredictionResponse(BaseModel):
+    success: bool = True
+    total_trips: int
+    predictions: List[ETAPredictionResponse]
 
-def estimate_traffic_level(
-    pickup_hour: int,
-    is_weekend: int
-) -> str:
 
-    """
-    Estimate traffic category from time.
-
-    This is NOT real-time traffic.
-
-    It is a deterministic backend assumption designed
-    so the UI does not need to ask the user for traffic.
-    """
-
-    # Weekend
+# ------------------------------------------------------------
+# Feature Transformation & Prediction Logic
+# ------------------------------------------------------------
+def estimate_traffic_level(pickup_hour: int, is_weekend: int) -> str:
+    """Deterministic backend rule for traffic category based on time."""
     if is_weekend:
-
-        if 11 <= pickup_hour <= 18:
-
-            return "Medium"
-
-        return "Low"
-
-    # Weekday morning rush
-    if 7 <= pickup_hour <= 10:
-
+        return "Medium" if 11 <= pickup_hour <= 18 else "Low"
+    if (7 <= pickup_hour <= 10) or (16 <= pickup_hour <= 19):
         return "High"
-
-    # Weekday evening rush
-    if 16 <= pickup_hour <= 19:
-
-        return "High"
-
-    # Midday
     if 11 <= pickup_hour <= 15:
-
         return "Medium"
-
-    # Night
     return "Low"
 
 
-# ============================================================
-# 13. INTERNAL DEFAULTS
-# ============================================================
+def build_feature_vector(req: ETAPredictionRequest) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    """Transform user request into encoded model-ready features."""
+    dt = datetime.strptime(f"{req.pickup_date} {req.pickup_time}", "%Y-%m-%d %H:%M")
+    pickup_hour = dt.hour
+    pickup_minute = dt.minute
+    month = dt.month
+    day = dt.day
+    day_of_year = dt.timetuple().tm_yday
+    weekday = dt.strftime("%A")
+    is_weekend = int(dt.weekday() >= 5)
 
-def create_backend_features(
-    request: ETAPredictionRequest
-) -> dict:
+    if month in [12, 1, 2]:
+        season = "Winter"
+    elif month in [3, 4, 5]:
+        season = "Spring"
+    elif month in [6, 7, 8]:
+        season = "Summer"
+    else:
+        season = "Fall"
 
-    """
-    Create all features that are not directly entered
-    by the user.
-    """
+    distance_km = calculate_haversine_distance_km(req.pickup_location, req.drop_location)
+    traffic_str = estimate_traffic_level(pickup_hour, is_weekend)
+    traffic_ordinal = config.traffic_mapping.get(traffic_str, 1)
 
-    datetime_features = (
-        create_datetime_features(
-            request.pickup_date,
-            request.pickup_time
-        )
-    )
-
-    distance = calculate_distance_km(
-        request.pickup_location,
-        request.drop_location
-    )
-
-    traffic_level = estimate_traffic_level(
-        datetime_features["pickup_hour"],
-        datetime_features["is_weekend"]
-    )
-
-    # --------------------------------------------------------
-    # Backend assumptions
-    # --------------------------------------------------------
-    #
-    # The UI does not ask for passenger count or surge.
-    # Therefore we use fixed baseline values.
-    #
-    # These should eventually be replaced by learned
-    # historical defaults if you retrain the model.
-    # --------------------------------------------------------
-
-    passenger_count = 1
-
-    surge_multiplier = 1.0
-
-
-    features = {
-
-        "pickup_location":
-            request.pickup_location,
-
-        "drop_location":
-            request.drop_location,
-
-        "pickup_hour":
-            datetime_features["pickup_hour"],
-
-        "pickup_minute":
-            datetime_features["pickup_minute"],
-
-        "weekday":
-            datetime_features["weekday"],
-
-        "is_weekend":
-            datetime_features["is_weekend"],
-
-        "season":
-            datetime_features["season"],
-
-        "month":
-            datetime_features["month"],
-
-        "day":
-            datetime_features["day"],
-
-        "day_of_year":
-            datetime_features["day_of_year"],
-
-        "trip_distance_km":
-            distance,
-
-        "traffic_level":
-            traffic_level,
-
-        "passenger_count":
-            passenger_count,
-
-        "surge_multiplier":
-            surge_multiplier
+    raw_features = {
+        "pickup_hour": pickup_hour,
+        "pickup_minute": pickup_minute,
+        "month": month,
+        "day": day,
+        "day_of_year": day_of_year,
+        "weekday": weekday,
+        "is_weekend": is_weekend,
+        "season": season,
+        "pickup_location": req.pickup_location,
+        "drop_location": req.drop_location,
+        "trip_distance_km": distance_km,
+        "traffic_level": traffic_ordinal,
+        "passenger_count": req.passenger_count or config.default_passenger_count,
+        "surge_multiplier": req.surge_multiplier or config.default_surge_multiplier,
     }
 
-    return features
+    df_raw = pd.DataFrame([raw_features])
+    cat_cols = config.categorical_columns
 
+    # OneHotEncoding
+    encoded_vals = encoder.transform(df_raw[cat_cols])
+    encoded_cols = encoder.get_feature_names_out(cat_cols)
+    df_encoded = pd.DataFrame(encoded_vals, columns=encoded_cols)
 
-# ============================================================
-# 14. PREPARE MODEL INPUT
-# ============================================================
+    df_numeric = df_raw.drop(columns=cat_cols)
+    model_input = pd.concat([df_numeric.reset_index(drop=True), df_encoded.reset_index(drop=True)], axis=1)
 
-def prepare_model_input(
-    features: dict
-) -> pd.DataFrame:
+    # Ensure all expected columns are aligned
+    for col in feature_columns:
+        if col not in model_input.columns:
+            model_input[col] = 0
+    model_input = model_input[feature_columns]
 
-    """
-    Convert backend-generated features into exactly the
-    format expected by the trained model.
-    """
-
-    raw_df = pd.DataFrame(
-        [features]
-    )
-
-    # --------------------------------------------------------
-    # Traffic encoding
-    # --------------------------------------------------------
-
-    traffic_map = {
-
-        "Low": 0,
-
-        "Medium": 1,
-
-        "High": 2
+    extra_meta = {
+        "calculated_distance_km": distance_km,
+        "estimated_traffic_level": traffic_str,
     }
 
-    raw_df["traffic_level"] = (
-        raw_df["traffic_level"]
-        .map(traffic_map)
-    )
+    return model_input, extra_meta
 
 
-    # --------------------------------------------------------
-    # Categorical columns
-    # --------------------------------------------------------
-
-    categorical_columns = [
-
-        "pickup_location",
-
-        "drop_location",
-
-        "weekday",
-
-        "season"
-    ]
-
-
-    # --------------------------------------------------------
-    # Encode categories
-    # --------------------------------------------------------
-
-    encoded = pd.DataFrame(
-
-        encoder.transform(
-            raw_df[
-                categorical_columns
-            ]
-        ),
-
-        columns=encoder.get_feature_names_out(
-            categorical_columns
-        )
-    )
-
-
-    # Remove original categorical columns
-    raw_df = raw_df.drop(
-        columns=categorical_columns
-    )
-
-
-    # Combine numerical + encoded features
-    model_input = pd.concat(
-        [
-            raw_df.reset_index(drop=True),
-
-            encoded.reset_index(drop=True)
-        ],
-
-        axis=1
-    )
+def log_prediction_async(req: ETAPredictionRequest, eta_minutes: float, meta: Dict[str, Any]) -> None:
+    """Log prediction for drift monitoring."""
+    try:
+        config.monitoring_dir.mkdir(parents=True, exist_ok=True)
+        file_exists = config.prediction_log_path.exists()
+        with open(config.prediction_log_path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=[
+                    "timestamp",
+                    "pickup_location",
+                    "drop_location",
+                    "pickup_date",
+                    "pickup_time",
+                    "distance_km",
+                    "traffic_level",
+                    "predicted_eta_minutes",
+                    "actual_eta_minutes",
+                ],
+            )
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(
+                {
+                    "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    "pickup_location": req.pickup_location,
+                    "drop_location": req.drop_location,
+                    "pickup_date": req.pickup_date,
+                    "pickup_time": req.pickup_time,
+                    "distance_km": meta["calculated_distance_km"],
+                    "traffic_level": meta["estimated_traffic_level"],
+                    "predicted_eta_minutes": round(eta_minutes, 2),
+                    "actual_eta_minutes": "",
+                }
+            )
+    except Exception as e:
+        logger.warning(f"Failed to log prediction: {e}")
 
 
-    # --------------------------------------------------------
-    # Ensure exact feature order
-    # --------------------------------------------------------
-
-    for column in FEATURE_COLUMNS:
-
-        if column not in model_input.columns:
-
-            model_input[column] = 0
-
-
-    # Remove unexpected columns
-    model_input = model_input[
-        FEATURE_COLUMNS
-    ]
-
-
-    return model_input
-
-
-# ============================================================
-# 15. PREDICTION FUNCTION
-# ============================================================
-
-def predict_eta(
-    request: ETAPredictionRequest
-) -> dict:
-
-    """
-    Main prediction workflow.
-    """
-
-    # Create backend features
-    features = create_backend_features(
-        request
-    )
-
-    logger.info(
-        "Prediction request: %s -> %s",
-        request.pickup_location,
-        request.drop_location
-    )
-
-    # Prepare model input
-    model_input = prepare_model_input(
-        features
-    )
-
-    # Predict
-    prediction = model.predict(
-        model_input
-    )
-
-    eta_minutes = float(
-        prediction[0]
-    )
-
-    # Prevent negative ETA
-    eta_minutes = max(
-        eta_minutes,
-        0.0
-    )
-
+# ------------------------------------------------------------
+# Endpoints
+# ------------------------------------------------------------
+@app.get("/", tags=["Info"])
+def root():
     return {
-
-        "eta_minutes":
-            round(
-                eta_minutes,
-                2
-            ),
-
-        "pickup_location":
-            request.pickup_location,
-
-        "drop_location":
-            request.drop_location,
-
-        "pickup_date":
-            request.pickup_date,
-
-        "pickup_time":
-            request.pickup_time,
-
-        "calculated_distance_km":
-            features["trip_distance_km"],
-
-        "estimated_traffic_level":
-            features["traffic_level"]
+        "service": config.project_name,
+        "version": config.project_version,
+        "docs_url": "/docs",
+        "health_url": "/health",
+        "model_info_url": "/model-info",
+        "metrics_url": "/metrics",
     }
 
 
-# ============================================================
-# 16. HEALTH CHECK
-# ============================================================
-
-@app.get(
-    "/health"
-)
+@app.get("/health", tags=["Health"])
 def health_check():
+    """Liveness probe."""
+    return {"status": "healthy", "service": config.project_name}
 
-    """
-    Health endpoint for deployment/monitoring.
-    """
 
+@app.get("/ready", tags=["Health"])
+def readiness_check():
+    """Readiness probe checking if model and encoder artifacts are loaded."""
+    is_ready = model is not None and encoder is not None and len(feature_columns) > 0
+    if not is_ready:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Model artifacts are not loaded or missing. Run model training first.",
+        )
     return {
-
-        "status": "healthy",
-
-        "service": "ETA Prediction API",
-
-        "model_loaded": model is not None,
-
-        "encoder_loaded": encoder is not None,
-
-        "feature_count":
-            len(FEATURE_COLUMNS)
+        "status": "ready",
+        "model_class": type(model).__name__,
+        "features_loaded": len(feature_columns),
     }
 
 
-# ============================================================
-# 17. MODEL INFORMATION
-# ============================================================
-
-@app.get(
-    "/model-info"
-)
-def model_info():
-
-    """
-    Return model metadata.
-    """
-
+@app.get("/model-info", tags=["Metadata"])
+def get_model_info():
+    """Return active model metadata and evaluation statistics."""
     return {
-
-        "model":
-            MODEL_METADATA.get(
-                "model",
-                "unknown"
-            ),
-
-        "test_r2":
-            MODEL_METADATA.get(
-                "test_r2"
-            ),
-
-        "test_mae":
-            MODEL_METADATA.get(
-                "test_mae"
-            ),
-
-        "test_rmse":
-            MODEL_METADATA.get(
-                "test_rmse"
-            ),
-
-        "feature_count":
-            len(FEATURE_COLUMNS)
+        "model_name": model_metadata.get("model", "XGBoost"),
+        "model_class": model_metadata.get("best_model_class", type(model).__name__ if model else "None"),
+        "test_r2": model_metadata.get("test_r2", None),
+        "test_rmse": model_metadata.get("test_rmse", None),
+        "test_mae": model_metadata.get("test_mae", None),
+        "test_mape": model_metadata.get("test_mape", None),
+        "feature_count": len(feature_columns),
+        "all_comparisons": model_metadata.get("all_model_comparisons", {}),
     }
 
 
-# ============================================================
-# 18. ETA PREDICTION ENDPOINT
-# ============================================================
-
-@app.post(
-    "/predict"
-)
-def predict(
-    request: ETAPredictionRequest
-):
-
-    """
-    Main ETA prediction endpoint.
-    """
+@app.post("/predict", response_model=ETAPredictionResponse, tags=["Inference"])
+def predict_single_trip(request: ETAPredictionRequest):
+    """Predict ETA in minutes for a single trip."""
+    start_time = time.time()
+    if model is None or encoder is None:
+        if not load_artifacts():
+            if HAS_PROMETHEUS:
+                PREDICTION_REQUESTS.labels(status="error", endpoint="/predict").inc()
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Model artifacts not found. Please run training pipeline.",
+            )
 
     try:
+        model_input, meta = build_feature_vector(request)
+        prediction = model.predict(model_input)[0]
+        eta_minutes = max(float(prediction), 0.5)
+        eta_seconds = eta_minutes * 60.0
 
-        result = predict_eta(
-            request
+        # Log prediction asynchronously for monitoring
+        log_prediction_async(request, eta_minutes, meta)
+
+        duration = time.time() - start_time
+        if HAS_PROMETHEUS:
+            PREDICTION_REQUESTS.labels(status="success", endpoint="/predict").inc()
+            PREDICTION_LATENCY.labels(endpoint="/predict").observe(duration)
+            PREDICTED_ETA_HISTOGRAM.observe(eta_minutes)
+
+        return ETAPredictionResponse(
+            success=True,
+            eta_minutes=round(eta_minutes, 2),
+            eta_seconds=round(eta_seconds, 1),
+            calculated_distance_km=meta["calculated_distance_km"],
+            estimated_traffic_level=meta["estimated_traffic_level"],
+            pickup_location=request.pickup_location,
+            drop_location=request.drop_location,
+            pickup_date=request.pickup_date,
+            pickup_time=request.pickup_time,
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
-
-        return {
-
-            "success": True,
-
-            "prediction": result
-        }
-
-    except Exception as error:
-
-        logger.exception(
-            "Prediction failed."
-        )
-
+    except Exception as e:
+        if HAS_PROMETHEUS:
+            PREDICTION_REQUESTS.labels(status="error", endpoint="/predict").inc()
+        logger.exception("Prediction failed.")
         raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Inference error: {str(e)}",
+        )
 
-            status_code=500,
 
-            detail=(
-                "Unable to generate ETA prediction."
+@app.post("/predict/batch", response_model=ETABatchPredictionResponse, tags=["Inference"])
+def predict_batch_trips(batch_req: ETABatchPredictionRequest):
+    """Batch inference endpoint for multiple trip requests."""
+    start_time = time.time()
+    if model is None or encoder is None:
+        if not load_artifacts():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Model artifacts not found.",
+            )
+
+    results: List[ETAPredictionResponse] = []
+    for req in batch_req.trips:
+        model_input, meta = build_feature_vector(req)
+        pred = model.predict(model_input)[0]
+        eta_min = max(float(pred), 0.5)
+        log_prediction_async(req, eta_min, meta)
+        results.append(
+            ETAPredictionResponse(
+                success=True,
+                eta_minutes=round(eta_min, 2),
+                eta_seconds=round(eta_min * 60.0, 1),
+                calculated_distance_km=meta["calculated_distance_km"],
+                estimated_traffic_level=meta["estimated_traffic_level"],
+                pickup_location=req.pickup_location,
+                drop_location=req.drop_location,
+                pickup_date=req.pickup_date,
+                pickup_time=req.pickup_time,
+                timestamp=datetime.now(timezone.utc).isoformat(),
             )
         )
+
+    duration = time.time() - start_time
+    if HAS_PROMETHEUS:
+        PREDICTION_REQUESTS.labels(status="success", endpoint="/predict/batch").inc()
+        PREDICTION_LATENCY.labels(endpoint="/predict/batch").observe(duration)
+
+    return ETABatchPredictionResponse(
+        success=True,
+        total_trips=len(results),
+        predictions=results,
+    )
+
+
+@app.get("/metrics", tags=["Monitoring"])
+def metrics():
+    """Prometheus metrics scraping endpoint."""
+    if not HAS_PROMETHEUS:
+        return Response(content="Prometheus client not installed", media_type="text/plain")
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("src.serving.api:app", host=config.serving_host, port=config.serving_port, reload=True)

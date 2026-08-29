@@ -1,0 +1,93 @@
+# ============================================================
+# Centralized MLOps Pipeline Parameters
+# ============================================================
+
+project:
+  name: "ride-eta-prediction"
+  version: "1.0.0"
+  description: "End-to-End Ride & Delivery ETA Prediction Pipeline (Flavor A)"
+  author: "Group-21"
+
+data:
+  raw_data_path: "data/raw/ETA_Model_data.csv"
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  ingested_data_path: "data/processed/ingested_eta.csv"
+  train_data_path: "data/processed/train_features.csv"
+  test_data_path: "data/processed/test_features.csv"
+  target_column: "actual_eta_minutes"
+  test_size: 0.20
+  random_state: 42
+  location_threshold: 20
+  max_eta_minutes: 200.0
+  min_eta_minutes: 0.5
+
+features:
+  categorical_columns:
+    - "pickup_location"
+    - "drop_location"
+    - "weekday"
+    - "season"
+  numerical_columns:
+    - "pickup_hour"
+    - "pickup_minute"
+    - "month"
+    - "day"
+    - "day_of_year"
+    - "trip_distance_km"
+    - "passenger_count"
+    - "surge_multiplier"
+    - "is_weekend"
+    - "traffic_level"
+  traffic_mapping:
+    Low: 0
+    Medium: 1
+    High: 2
+
+models:
+  store_dir: "model_store"
+  model_path: "model_store/eta_model.pkl"
+  encoder_path: "model_store/eta_encoder.pkl"
+  feature_columns_path: "model_store/feature_columns.json"
+  metadata_path: "model_store/model_metadata.json"
+  metrics_path: "model_store/evaluation_metrics.json"
+  experiment_name: "Ride_ETA_Prediction_Experiment"
+  registered_model_name: "RideETAPredictor"
+  
+  hyperparameters:
+    ridge:
+      alpha: 1.0
+    random_forest:
+      n_estimators: 100
+      max_depth: 12
+      random_state: 42
+      n_jobs: -1
+    gradient_boosting:
+      n_estimators: 120
+      learning_rate: 0.1
+      max_depth: 5
+      random_state: 42
+    xgboost:
+      n_estimators: 120
+      learning_rate: 0.1
+      max_depth: 5
+      random_state: 42
+      verbosity: 0
+
+serving:
+  host: "0.0.0.0"
+  port: 8000
+  api_title: "Ride ETA Prediction API"
+  api_version: "1.0.0"
+  default_passenger_count: 1
+  default_surge_multiplier: 1.0
+
+monitoring:
+  dir: "monitoring"
+  prediction_log_path: "monitoring/prediction_log.csv"
+  drift_report_html: "monitoring/drift_report.html"
+  drift_report_json: "monitoring/drift_report.json"
+  retrain_decision_path: "monitoring/retrain_decision.json"
+  rmse_threshold_pct: 0.15
+  drift_share_threshold: 0.30
+  stat_test_threshold: 0.05

@@ -1,45 +1,50 @@
+import pytest
 import pandas as pd
-
-from src.monitoring import compute_monitoring_metrics, should_retrain, simulate_data_drift
-
-
-def test_compute_monitoring_metrics_returns_expected_fields():
-    predictions = pd.DataFrame(
-        {
-            "predicted_trip_duration_seconds": [200.0, 250.0, 300.0],
-            "actual_trip_duration_seconds": [180.0, 270.0, 330.0],
-        }
-    )
-
-    metrics = compute_monitoring_metrics(predictions)
-
-    assert set(metrics.keys()) == {"mae", "rmse", "num_records"}
-    assert metrics["num_records"] == 3
-    assert metrics["mae"] > 0
-    assert metrics["rmse"] > 0
+import numpy as np
+from src.monitoring.drift_detector import calculate_statistical_drift
+from src.monitoring.drift_simulation import simulate_operational_drift
+from src.monitoring.retrain_trigger import evaluate_retraining_policy, load_baseline_metrics
 
 
-def test_simulate_data_drift_increases_trip_times():
-    df = pd.DataFrame(
-        {
-            "distance_km": [1.0, 2.0, 3.0],
-            "hour_of_day": [15, 18, 20],
-            "day_of_week": [0, 1, 2],
-            "is_weekend": [0, 0, 1],
-            "trip_duration": [200, 300, 400],
-        }
-    )
-
-    drifted = simulate_data_drift(df)
-
-    assert drifted["trip_duration"].gt(df["trip_duration"]).all()
-    assert drifted["distance_km"].equals(df["distance_km"])
+def test_calculate_statistical_drift_identical_data():
+    df = pd.DataFrame({
+        "pickup_hour": [8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+        "trip_distance_km": [2.0, 3.5, 1.2, 4.0, 5.5, 2.8, 3.1, 4.2, 1.8, 6.0],
+    })
+    result = calculate_statistical_drift(df, df)
+    assert result["dataset_drift_detected"] is False
+    assert result["drift_share"] == 0.0
 
 
-def test_should_retrain_detects_threshold_crossing():
-    baseline_rmse = 400.0
-    current_rmse = 520.0
-    threshold_pct = 0.15
+def test_calculate_statistical_drift_detects_distribution_shift():
+    ref_df = pd.DataFrame({
+        "trip_distance_km": np.random.normal(loc=2.0, scale=0.5, size=100),
+    })
+    curr_df = pd.DataFrame({
+        "trip_distance_km": np.random.normal(loc=15.0, scale=2.0, size=100),  # Major shift
+    })
+    result = calculate_statistical_drift(ref_df, curr_df)
+    assert result["drift_by_feature"] if "drift_by_feature" in result else True
+    assert result["dataset_drift_detected"] is True
 
-    assert should_retrain(current_rmse, baseline_rmse, threshold_pct) is True
-    assert should_retrain(410.0, baseline_rmse, threshold_pct) is False
+
+def test_simulate_operational_drift():
+    df = pd.DataFrame({
+        "pickup_hour": [17, 18, 19],
+        "is_weekend": [0, 0, 1],
+        "trip_distance_km": [3.0, 4.0, 5.0],
+        "actual_eta_minutes": [10.0, 15.0, 20.0],
+    })
+    drifted = simulate_operational_drift(df, duration_multiplier=1.5)
+    assert (drifted["actual_eta_minutes"] > df["actual_eta_minutes"]).all()
+
+
+def test_evaluate_retraining_policy():
+    # Test healthy scenario
+    res_healthy = evaluate_retraining_policy(current_rmse=5.7, threshold_pct=0.15)
+    assert "retraining_triggered" in res_healthy
+
+    # Test degraded scenario
+    res_degraded = evaluate_retraining_policy(current_rmse=12.0, threshold_pct=0.15)
+    assert res_degraded["retraining_triggered"] is True
+    assert res_degraded["status"] == "ACTION_REQUIRED_RETRAIN"

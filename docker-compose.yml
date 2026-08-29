@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # 1. FastAPI Model Serving Layer
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eta_prediction_api
+    ports:
+      - "8000:8000"
+    command: uvicorn src.serving.api:app --host 0.0.0.0 --port 8000
+    volumes:
+      - ./model_store:/app/model_store
+      - ./monitoring:/app/monitoring
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # 2. Streamlit Interactive Dashboard
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eta_prediction_ui
+    ports:
+      - "8501:8501"
+    command: streamlit run ui/app.py --server.port 8501 --server.address 0.0.0.0
+    volumes:
+      - ./model_store:/app/model_store
+      - ./monitoring:/app/monitoring
+      - ./data:/app/data
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # 3. MLflow Tracking Server
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eta_mlflow_server
+    ports:
+      - "5000:5000"
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns
+    volumes:
+      - ./mlruns:/app/mlruns
+      - ./mlflow.db:/app/mlflow.db
+    restart: unless-stopped
+
+  # 4. Prometheus Metrics Scraper
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: eta_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # 5. Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: eta_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    restart: unless-stopped

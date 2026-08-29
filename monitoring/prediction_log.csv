@@ -1,0 +1,8 @@
+timestamp,passenger_count,distance_km,hour_of_day,day_of_week,is_weekend,predicted_trip_duration_seconds,actual_trip_duration_seconds
+2026-08-15T09:44:30,1,5.2,17,2,0,1588.62,
+2026-08-26T18:48:42,Upper West Side,Harlem,2026-08-27,17:30,3.658,High,20.18,
+2026-08-26T18:48:42,Upper West Side,Harlem,2026-08-27,17:30,3.658,High,20.18,
+2026-08-26T18:48:42,Chelsea,South Slope,2026-08-27,08:15,9.334,High,29.31,
+2026-08-26T18:49:41+00:00,Upper West Side,Harlem,2026-08-27,17:30,3.658,High,20.18,
+2026-08-26T18:49:41+00:00,Upper West Side,Harlem,2026-08-27,17:30,3.658,High,20.18,
+2026-08-26T18:49:41+00:00,Chelsea,South Slope,2026-08-27,08:15,9.334,High,29.31,
